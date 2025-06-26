@@ -9,8 +9,9 @@ from scrapers.pchome import scrape_pchome
 from typing import List, Dict
 from dotenv import load_dotenv
 
-app = Flask(__name__)
+logging.basicConfig(level=logging.INFO)
 
+app = Flask(__name__)
 load_dotenv()
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 credentials = boto3.Session().get_credentials()
@@ -40,7 +41,7 @@ def translate_text(text, source_lang='zh', target_lang='en'):
     
     except Exception as e:
         logging.error(f"Translation failed for '{text}': {e}")
-        return text  
+        return text
 
 def create_index(index_name: str = "products"):
     if not opensearch_client.indices.exists(index=index_name):
@@ -56,34 +57,34 @@ def create_index(index_name: str = "products"):
             }
         }
         opensearch_client.indices.create(index=index_name, body=index_body)
-        print(f"已創建索引: {index_name}")
+        logging.info(f"Index created: {index_name}")
 
 def store_items(items: List[Dict], index_name: str = "products"):
     for item in items:
         try:
-            embedding = openai_client.embeddings.create(input=item["name"], model="text-embedding-ada-002").data[0].embedding
+            embedding = openai_client.embeddings.create(input=item["name"], model=os.getenv("OPENAI_MODEL")).data[0].embedding
             doc = {"EC": item["EC"], "name": item["name"],  "price_twd": item["price_twd"], "href": item["href"], "embedding": embedding}
             opensearch_client.index(index=index_name, id=item["href"], body=doc)
-            print(f"已儲存: {item['name']}")
+            logging.info(f"Item stored: {item['name']}")
         except Exception as e:
-            print(f"儲存失敗: {item['name']} - {e}")
+            logging.error(f"Failed to store item: {item['name']} - {e}")
         time.sleep(random.uniform(0.5, 1.5))
 
 def run_crawler():
     keyword = "laptop"
     create_index()
     all_items = scrape_ebay(keyword) + scrape_momo(keyword) + scrape_pchome(keyword)
-    print(f"收集 {len(all_items)} 筆數據")
+    logging.info(f"Collect {len(all_items)} items from all electronic commerce sites")
     store_items(all_items)
 
 def search_similar(name: str, index_name: str = "products", top_k: int = 5) -> List[Dict]:
     try:
-        embedding = openai_client.embeddings.create(input=name, model="text-embedding-ada-002").data[0].embedding
+        embedding = openai_client.embeddings.create(input=name, model=os.getenv("OPENAI_MODEL")).data[0].embedding
         query = {"query": {"knn": {"embedding": {"vector": embedding, "k": top_k}}}, "_source": ["EC", "name", "price_usd", "price_twd", "href"]}
         response = opensearch_client.search(index=index_name, body=query)
         return [hit["_source"] for hit in response["hits"]["hits"]]
     except Exception as e:
-        print(f"搜尋失敗: {e}")
+        logging.error(f"Search failed: {e}")
         return []
 
 @app.route('/search', methods=['GET'])
