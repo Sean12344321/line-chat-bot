@@ -1,4 +1,4 @@
-import time, random, boto3, requests, logging
+import time, random, boto3, requests, logging, os
 from opensearchpy import OpenSearch, RequestsHttpConnection
 from requests_aws4auth import AWS4Auth
 from openai import OpenAI
@@ -7,14 +7,16 @@ from scrapers.ebay import scrape_ebay
 from scrapers.momo import scrape_momo
 from scrapers.pchome import scrape_pchome  
 from typing import List, Dict
+from dotenv import load_dotenv
 
 app = Flask(__name__)
 
-openai_client = OpenAI(api_key="YOUR_OPENAI_API_KEY")
+load_dotenv()
+openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 credentials = boto3.Session().get_credentials()
 aws_auth = AWS4Auth(credentials.access_key, credentials.secret_key, 'ap-northeast-1', 'es', session_token=credentials.token)
 opensearch_client = OpenSearch(
-    hosts=[{'host': 'search-shopping-bot-k5d7bmbsaqxzl5ka6kqszwgvwi.aos.ap-northeast-1.on.aws', 'port': 443}],
+    hosts=[{'host': os.getenv("OpenSearch_Domain"), 'port': 443}],
     http_auth=aws_auth,
     use_ssl=True,
     verify_certs=True,

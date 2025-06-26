@@ -7,3 +7,4 @@ venv/
 gpt-linebot.py
 chromedriver.exe
 tempCodeRunnerFile.py
+.env
