@@ -21,11 +21,11 @@ opensearch_client = OpenSearch(
     http_auth=aws_auth,
     use_ssl=True,
     verify_certs=True,
-    connection_class=RequestsHttpConnection
+    connection_class=RequestsHttpConnection,
+    timeout=30,
 )
 
 def translate_text(text, source_lang='zh', target_lang='en'):
-
     try:
         translate = boto3.client('translate')
         
@@ -43,7 +43,28 @@ def translate_text(text, source_lang='zh', target_lang='en'):
         logging.error(f"Translation failed for '{text}': {e}")
         return text
 
-def create_index(index_name: str = "products"):
+def translate_productNames_to_english(items, source_lang='zh', target_lang='en'):
+    """
+    Normalize product names in a list of scraped items by translating to target language.
+    
+    Args:
+        items (list): List of dicts with 'name' field (e.g., from eBay, Momo, PChome).
+        source_lang (str): Source language code.
+        target_lang (str): Target language code.
+    
+    Returns:
+        list: Items with translated 'name' fields.
+    """
+    normalized_items = []
+    for item in items:
+        if item["E-Commerce site"] == "ebay":
+            continue  # Skip eBay items for translation, as they are already in English
+        item_copy = item.copy()
+        item_copy['name'] = translate_text(item['name'], source_lang, target_lang)
+        normalized_items.append(item_copy)
+    return normalized_items
+
+def create_opensearch_index(index_name: str = "products"):
     if not opensearch_client.indices.exists(index=index_name):
         index_body = {
             "settings": {"index": {"knn": True}},
@@ -59,23 +80,32 @@ def create_index(index_name: str = "products"):
         opensearch_client.indices.create(index=index_name, body=index_body)
         logging.info(f"Index created: {index_name}")
 
-def store_items(items: List[Dict], index_name: str = "products"):
+def store_items_to_opensearch(items: List[Dict], index_name: str = "products"):
+    """ Store items in OpenSearch with embeddings."""
     for item in items:
         try:
-            embedding = openai_client.embeddings.create(input=item["name"], model=os.getenv("OPENAI_MODEL")).data[0].embedding
-            doc = {"EC": item["EC"], "name": item["name"],  "price_twd": item["price_twd"], "href": item["href"], "embedding": embedding}
-            opensearch_client.index(index=index_name, id=item["href"], body=doc)
-            logging.info(f"Item stored: {item['name']}")
+            doc = {"E-Commerce site": item["E-Commerce site"], "name": item["name"],  "price_twd": item["price_twd"], "href": item["href"], "embedding": item["embedding"]}
+            opensearch_client.index(index=index_name, id=item["href"], body=doc) #if href repeated, it will overwrite the existing document 
+            logging.info(f"Item stored: {item['name']}") 
         except Exception as e:
-            logging.error(f"Failed to store item: {item['name']} - {e}")
-        time.sleep(random.uniform(0.5, 1.5))
+            logging.error(f"Failed to store item: {item['name']} - {str(e)}")
 
 def run_crawler():
     keyword = "laptop"
-    create_index()
+    create_opensearch_index()
     all_items = scrape_ebay(keyword) + scrape_momo(keyword) + scrape_pchome(keyword)
     logging.info(f"Collect {len(all_items)} items from all electronic commerce sites")
-    store_items(all_items)
+
+    all_items = translate_productNames_to_english(all_items, source_lang='zh', target_lang='en')
+    logging.info("All items translated to English")
+    
+    for item in all_items:
+        embedding = openai_client.embeddings.create(input=item["name"], model=os.getenv("OPENAI_MODEL")).data[0].embedding
+        item["embedding"] = embedding
+    logging.info("All items normalized and embeddings created")
+
+    store_items_to_opensearch(all_items)
+    logging.info("All items stored to OpenSearch")
 
 def search_similar(name: str, index_name: str = "products", top_k: int = 5) -> List[Dict]:
     try:
@@ -97,4 +127,10 @@ def search():
 
 if __name__ == "__main__":
     # app.run(host="0.0.0.0", port=8080) 
-    run_crawler()  # 啟動爬蟲
+    run_crawler()  
+    # items = [{"EC": "ebay", "name": "Laptop A", "price_twd": 30000, "href": "http://example.com/laptop-a"},
+    #           {"EC": "momo", "name": "Laptop B", "price_twd": 25000, "href": "http://example.com/laptop-b"},
+    #           {"EC": "pchome", "name": "Laptop C", "price_twd": 28000, "href": "http://example.com/laptop-c"}]
+    # items = translate_productNames_to_english(items, source_lang='zh', target_lang='en')
+    # store_items_to_opensearch(items)
+    # print(items)

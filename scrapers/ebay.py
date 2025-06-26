@@ -62,7 +62,7 @@ def scrape_ebay(keyword, max_items=200):
                     name = p.find_element(By.CLASS_NAME, 's-item__title').text
                     price_element = p.find_element(By.CLASS_NAME, 's-item__price')
                     price_text = price_element.text.replace('NT', '').replace('$', '').replace(',', '').strip()
-                    logging.info(f"Product: {name}, Price: {price_text}")
+                    logging.info(f"product: {name}, price_twd: {price_text}")
                     try:
                         price = int(float(price_text.split(' to ')[0])) 
                     except ValueError:
@@ -71,7 +71,7 @@ def scrape_ebay(keyword, max_items=200):
 
                     href = p.find_element(By.CLASS_NAME, 's-item__link').get_attribute('href')
 
-                    items.append({"E-Commerce site": "ebay", "name": name, "price": price, "href": href})
+                    items.append({"E-Commerce site": "ebay", "name": name, "price_twd": price, "href": href})
 
                     if len(items) >= max_items:
                         logging.info(f"Reached {max_items} items, stopping")

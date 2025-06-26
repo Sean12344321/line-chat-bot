@@ -8,7 +8,7 @@ import time, logging
 
 logging.basicConfig(level=logging.INFO)
 
-def scrape_momo(keyword, max_items=200):
+def scrape_momo(keyword, max_items=100):
     # Configure Chrome options for Linux
     options = Options()
     options.add_argument('--headless')  
@@ -35,7 +35,7 @@ def scrape_momo(keyword, max_items=200):
         while start_page == 0:
             pages = driver.find_elements(By.CLASS_NAME, 'pagination-link')
             start_page = len(pages) // 2 # momo pagination is invalide for first half of the pages, so we start from the second half
-            logging.info(f"找到 {len(pages)} 頁")
+            logging.info(f"Find {len(pages)} pages")
         for page in pages[start_page:len(pages)]:
             page.click()
             time.sleep(2) # Wait for page to load, can't use WebDriverWait here due to dynamic content
@@ -46,8 +46,8 @@ def scrape_momo(keyword, max_items=200):
                     name = p.find_element(By.CLASS_NAME, 'prdNameTitle').text
                     price = p.find_element(By.CLASS_NAME, 'price').text.replace(",", "")
                     href = p.find_element(By.CLASS_NAME, 'goods-img-url').get_attribute('href')
-                    items.append({"E-Commerce site": "momo", "name": name, "price": int(price), "href": href})
-                    logging.info(f"商品名稱: {name}, 價格: {price}")
+                    items.append({"E-Commerce site": "momo", "name": name, "price_twd": int(price), "href": href})
+                    logging.info(f"name: {name}, price_twd: {price}")
                     if len(items) >= max_items:
                         logging.info(f"Reached maximum items limit: {max_items}")
                         driver.quit()

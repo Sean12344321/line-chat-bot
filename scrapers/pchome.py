@@ -4,7 +4,7 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
-def scrape_pchome(keyword, max_items=200):
+def scrape_pchome(keyword, max_items=100):
     items = []
     base_url = "https://ecshweb.pchome.com.tw/search/v3.3/all/results"
     
@@ -39,8 +39,8 @@ def scrape_pchome(keyword, max_items=200):
                     name = prod['name']
                     price = prod['price']
                     href = f"https://24h.pchome.com.tw/prod/{prod['Id']}"
-                    items.append({"E-Commerce site": "pchome", "name": name, "price": price, "href": href})
-                    logging.info(f"Scraped: {name}, Price: {price} TWD, URL: {href}")
+                    items.append({"E-Commerce site": "pchome", "name": name, "price_twd": price, "href": href})
+                    logging.info(f"product: {name}, price_twd: {price} , url: {href}")
                     
                     if len(items) >= max_items:
                         logging.info(f"Reached {max_items} items, stopping")
