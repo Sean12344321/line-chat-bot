@@ -1,18 +1,25 @@
-import time, random, boto3, requests, logging, os
+import os, logging, boto3
+from dotenv import load_dotenv
+from flask import Flask, request, abort
+from typing import List, Dict
+from openai import OpenAI
 from opensearchpy import OpenSearch, RequestsHttpConnection
 from requests_aws4auth import AWS4Auth
-from openai import OpenAI
-from flask import Flask, request, jsonify
+from linebot import LineBotApi, WebhookHandler
+from linebot.exceptions import InvalidSignatureError
+from linebot.models import MessageEvent, TextMessage, TextSendMessage
 from scrapers.ebay import scrape_ebay
 from scrapers.momo import scrape_momo
-from scrapers.pchome import scrape_pchome  
-from typing import List, Dict
-from dotenv import load_dotenv
+from scrapers.pchome import scrape_pchome
+
+
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
-load_dotenv()
+line_bot_api = LineBotApi(os.getenv('LINE_TOKEN'))
+handler = WebhookHandler(os.getenv('LINE_SECRET'))
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 credentials = boto3.Session().get_credentials()
 aws_auth = AWS4Auth(credentials.access_key, credentials.secret_key, 'ap-northeast-1', 'es', session_token=credentials.token)
@@ -107,27 +114,41 @@ def run_crawler():
     store_items_to_opensearch(all_items)
     logging.info("All items stored to OpenSearch")
 
-def search_similar(name: str, index_name: str = "products", top_k: int = 5) -> List[Dict]:
+def search_similar(user_input: str, index_name: str = "products", top_k: int = 5) -> List[Dict]:
     try:
-        embedding = openai_client.embeddings.create(input=name, model=os.getenv("OPENAI_MODEL")).data[0].embedding
-        query = {"query": {"knn": {"embedding": {"vector": embedding, "k": top_k}}}, "_source": ["EC", "name", "price_usd", "price_twd", "href"]}
+        embedding = openai_client.embeddings.create(input=user_input, model=os.getenv("OPENAI_MODEL")).data[0].embedding
+        query = {"query": {"knn": {"embedding": {"vector": embedding, "k": top_k}}}, "_source": ["E-Commerce site", "name", "price_twd",  "href"]}
         response = opensearch_client.search(index=index_name, body=query)
         return [hit["_source"] for hit in response["hits"]["hits"]]
     except Exception as e:
         logging.error(f"Search failed: {e}")
         return []
 
-@app.route('/search', methods=['GET'])
-def search():
-    query = request.args.get('query')
-    if not query:
-        return jsonify({"error": "Missing query parameter"}), 400
-    results = search_similar(query)
-    return jsonify({"results": results})
+@app.route("/", methods=['POST'])
+def callback():
+    signature = request.headers['X-Line-Signature']
+    body = request.get_data(as_text=True)
+
+    try:
+        handler.handle(body, signature)
+    except InvalidSignatureError:
+        abort(400)
+    return 'OK'
+
+@handler.add(MessageEvent, message=TextMessage)
+def handle_message(event):
+    user_input = event.message.text
+    translated_input = translate_text(user_input, source_lang='zh', target_lang='en')
+    result  = search_similar(translated_input)
+    print(result)
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=f"Most similar urls: {result}")
+    )
 
 if __name__ == "__main__":
-    # app.run(host="0.0.0.0", port=8080) 
-    run_crawler()  
+    app.run(host="0.0.0.0", port=5000, debug=True)
+    # run_crawler()  
     # items = [{"EC": "ebay", "name": "Laptop A", "price_twd": 30000, "href": "http://example.com/laptop-a"},
     #           {"EC": "momo", "name": "Laptop B", "price_twd": 25000, "href": "http://example.com/laptop-b"},
     #           {"EC": "pchome", "name": "Laptop C", "price_twd": 28000, "href": "http://example.com/laptop-c"}]
