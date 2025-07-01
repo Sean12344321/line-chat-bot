@@ -5,20 +5,21 @@ from typing import List, Dict
 from openai import OpenAI
 from opensearchpy import OpenSearch, RequestsHttpConnection
 from requests_aws4auth import AWS4Auth
-from linebot import LineBotApi, WebhookHandler
-from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage
+from linebot.v3 import WebhookHandler
+from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent
+from linebot.v3.messaging import FlexMessage, ReplyMessageRequest, Configuration, ApiClient, MessagingApi, FlexContainer
+from linebot.v3.exceptions import InvalidSignatureError
 from scrapers.ebay import scrape_ebay
 from scrapers.momo import scrape_momo
 from scrapers.pchome import scrape_pchome
-
+import json
 
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
-line_bot_api = LineBotApi(os.getenv('LINE_TOKEN'))
+configuration = Configuration(access_token=os.getenv('LINE_TOKEN'))
 handler = WebhookHandler(os.getenv('LINE_SECRET'))
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 credentials = boto3.Session().get_credentials()
@@ -29,7 +30,7 @@ opensearch_client = OpenSearch(
     use_ssl=True,
     verify_certs=True,
     connection_class=RequestsHttpConnection,
-    timeout=30,
+    timeout=10,
 )
 
 def translate_text(text, source_lang='zh', target_lang='en'):
@@ -124,31 +125,53 @@ def search_similar(user_input: str, index_name: str = "products", top_k: int = 5
         logging.error(f"Search failed: {e}")
         return []
 
+
 @app.route("/", methods=['POST'])
 def callback():
     signature = request.headers['X-Line-Signature']
     body = request.get_data(as_text=True)
-
+    app.logger.info("Request body: " + body)
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
+        app.logger.info("Invalid signature. Please check your channel access token/channel secret.")
         abort(400)
-    return 'OK'
 
-@handler.add(MessageEvent, message=TextMessage)
+    return 'OK'
+@handler.add(FollowEvent)
+def handle_follow(event):
+    with open("user_message.json", encoding='utf-8') as f:
+        flex_msg = json.load(f)
+
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        bubble_string = json.dumps(flex_msg, ensure_ascii=False)
+        message = FlexMessage(alt_text="Welcome!", contents=FlexContainer.from_json(bubble_string))
+        line_bot_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[message]
+            )
+        )
+@handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    user_input = event.message.text
-    translated_input = translate_text(user_input, source_lang='zh', target_lang='en')
-    result  = search_similar(translated_input)
-    print(result)
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=f"Most similar urls: {result}")
-    )
+    with open("user_message.json", encoding='utf-8') as f:
+        flex_msg = json.load(f)
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        bubble_string = json.dumps(flex_msg, ensure_ascii=False)
+        user_input = event.message.text
+        message = FlexMessage(alt_text="hello", contents=FlexContainer.from_json(bubble_string))
+        line_bot_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[message]
+            )
+        )
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
-    # run_crawler()  
+        # run_crawler()
     # items = [{"EC": "ebay", "name": "Laptop A", "price_twd": 30000, "href": "http://example.com/laptop-a"},
     #           {"EC": "momo", "name": "Laptop B", "price_twd": 25000, "href": "http://example.com/laptop-b"},
     #           {"EC": "pchome", "name": "Laptop C", "price_twd": 28000, "href": "http://example.com/laptop-c"}]
