@@ -98,6 +98,20 @@ def store_items_to_opensearch(items: List[Dict], index_name: str = "products"):
         except Exception as e:
             logging.error(f"Failed to store item: {item['name']} - {str(e)}")
 
+def delete_all_items_from_opensearch(index_name: str = "products"):
+    """Delete all documents from the specified OpenSearch index."""
+    try:
+        query = {
+            "query": {
+                "match_all": {}
+            }
+        }
+        response = opensearch_client.delete_by_query(index=index_name, body=query)
+        logging.info(f"Deleted {response['deleted']} documents from index '{index_name}'")
+    except Exception as e:
+        logging.error(f"Failed to delete documents from index '{index_name}': {str(e)}")
+
+
 def run_crawler():
     keyword = "laptop"
     create_opensearch_index()
@@ -207,11 +221,8 @@ def handle_message(event):
             logging.error(f"Failed to reply message: {e}")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
-        # run_crawler()
-    # items = [{"EC": "ebay", "name": "Laptop A", "price_twd": 30000, "href": "http://example.com/laptop-a"},
-    #           {"EC": "momo", "name": "Laptop B", "price_twd": 25000, "href": "http://example.com/laptop-b"},
-    #           {"EC": "pchome", "name": "Laptop C", "price_twd": 28000, "href": "http://example.com/laptop-c"}]
-    # items = translate_productNames_to_english(items, source_lang='zh', target_lang='en')
+    # app.run(host="0.0.0.0", port=5000, debug=True)
+
+    # run_crawler()
     # store_items_to_opensearch(items)
     # print(items)
