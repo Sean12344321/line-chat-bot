@@ -39,14 +39,14 @@ def scrape_pchome(keyword, max_items=100):
                     name = prod['name']
                     price = prod['price']
                     href = f"https://24h.pchome.com.tw/prod/{prod['Id']}"
-                    items.append({"E-Commerce site": "pchome", "name": name, "price_twd": price, "href": href})
-                    logging.info(f"product: {name}, price_twd: {price} , url: {href}")
+                    image_url = f"https://cs-a.ecimg.tw/{prod['picB']}" if 'picB' in prod else None
+                    items.append({"E-Commerce site": "pchome", "name": name, "price_twd": price, "href": href, "image_url": image_url})
+                    logging.info(f"product: {name}, price_twd: {price}, url: {href}, image_url: {image_url}")
                     
                     if len(items) >= max_items:
                         logging.info(f"Reached {max_items} items, stopping")
                         return items
                 
-                time.sleep(1)  # Avoid rate limiting
             
             except Exception as e:
                 logging.error(f"Error on page {page}: {e}")

@@ -51,9 +51,9 @@ def scrape_ebay(keyword, max_items=200):
             logging.info(f"Scraping page {current_page}: {driver.current_url}")
 
             WebDriverWait(driver, 15).until(
-                EC.presence_of_all_elements_located((By.CLASS_NAME, 's-item__info'))
+                EC.presence_of_all_elements_located((By.CLASS_NAME, 's-item__wrapper'))
             )
-            products = driver.find_elements(By.CLASS_NAME, 's-item__info')
+            products = driver.find_elements(By.CLASS_NAME, 's-item__wrapper')
             if len(products) == 2:
                 logging.error("Only 2 products found, it's ebay problem that only show 2 invalid products")
                 return items
@@ -62,7 +62,6 @@ def scrape_ebay(keyword, max_items=200):
                     name = p.find_element(By.CLASS_NAME, 's-item__title').text
                     price_element = p.find_element(By.CLASS_NAME, 's-item__price')
                     price_text = price_element.text.replace('NT', '').replace('$', '').replace(',', '').strip()
-                    logging.info(f"product: {name}, price_twd: {price_text}")
                     try:
                         price = int(float(price_text.split(' to ')[0])) 
                     except ValueError:
@@ -70,9 +69,11 @@ def scrape_ebay(keyword, max_items=200):
                         continue
 
                     href = p.find_element(By.CLASS_NAME, 's-item__link').get_attribute('href')
-
-                    items.append({"E-Commerce site": "ebay", "name": name, "price_twd": price, "href": href})
-
+                    image_wrapper = p.find_element(By.CSS_SELECTOR, '.s-item__image-wrapper.image-treatment')
+                    img_tag = image_wrapper.find_element(By.TAG_NAME, 'img')
+                    image_url = img_tag.get_attribute('src')
+                    items.append({"E-Commerce site": "ebay", "name": name, "price_twd": price, "href": href, "image_url": image_url})
+                    logging.info(f"name: {name}, price_twd: {price}, href: {href}, image_url: {image_url}")
                     if len(items) >= max_items:
                         logging.info(f"Reached {max_items} items, stopping")
                         return items
@@ -123,7 +124,7 @@ if __name__ == "__main__":
     max_attempts = 3
     attempts = 0
     while not data and attempts < max_attempts:
-        data = scrape_ebay("laptop", max_items=100)
+        data = scrape_ebay("t-shirt", max_items=100)
         attempts += 1
     for item in data:
         print(item)

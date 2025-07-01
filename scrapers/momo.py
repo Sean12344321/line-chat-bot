@@ -46,8 +46,9 @@ def scrape_momo(keyword, max_items=100):
                     name = p.find_element(By.CLASS_NAME, 'prdNameTitle').text
                     price = p.find_element(By.CLASS_NAME, 'price').text.replace(",", "")
                     href = p.find_element(By.CLASS_NAME, 'goods-img-url').get_attribute('href')
-                    items.append({"E-Commerce site": "momo", "name": name, "price_twd": int(price), "href": href})
-                    logging.info(f"name: {name}, price_twd: {price}")
+                    image_url = p.find_element(By.CLASS_NAME, 'prdImg').get_attribute('src')
+                    items.append({"E-Commerce site": "momo", "name": name, "price_twd": int(price), "href": href, "image_url": image_url})
+                    logging.info(f"name: {name}, price_twd: {price}, image_url: {image_url}")
                     if len(items) >= max_items:
                         logging.info(f"Reached maximum items limit: {max_items}")
                         driver.quit()

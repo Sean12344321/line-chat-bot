@@ -104,8 +104,8 @@ def run_crawler():
     all_items = scrape_ebay(keyword) + scrape_momo(keyword) + scrape_pchome(keyword)
     logging.info(f"Collect {len(all_items)} items from all electronic commerce sites")
 
-    all_items = translate_productNames_to_english(all_items, source_lang='zh', target_lang='en')
-    logging.info("All items translated to English")
+    # all_items = translate_productNames_to_english(all_items, source_lang='zh', target_lang='en')
+    # logging.info("All items translated to English")
     
     for item in all_items:
         embedding = openai_client.embeddings.create(input=item["name"], model=os.getenv("OPENAI_MODEL")).data[0].embedding
@@ -118,13 +118,26 @@ def run_crawler():
 def search_similar(user_input: str, index_name: str = "products", top_k: int = 5) -> List[Dict]:
     try:
         embedding = openai_client.embeddings.create(input=user_input, model=os.getenv("OPENAI_MODEL")).data[0].embedding
-        query = {"query": {"knn": {"embedding": {"vector": embedding, "k": top_k}}}, "_source": ["E-Commerce site", "name", "price_twd",  "href"]}
+        query = {
+            "size": top_k, 
+            "query": {
+                "knn": {
+                    "embedding": {
+                        "vector": embedding,
+                        "k": top_k
+                    }
+                }
+            },
+            "_source": ["E-Commerce site", "name", "price_twd", "href"]
+        }
         response = opensearch_client.search(index=index_name, body=query)
         return [hit["_source"] for hit in response["hits"]["hits"]]
     except Exception as e:
         logging.error(f"Search failed: {e}")
         return []
 
+with open("flex_message.json", encoding='utf-8') as f:
+    flex_msg = json.load(f)
 
 @app.route("/", methods=['POST'])
 def callback():
@@ -138,14 +151,13 @@ def callback():
         abort(400)
 
     return 'OK'
+
 @handler.add(FollowEvent)
 def handle_follow(event):
-    with open("user_message.json", encoding='utf-8') as f:
-        flex_msg = json.load(f)
-
+    welcome_msg = flex_msg["welcome"]
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
-        bubble_string = json.dumps(flex_msg, ensure_ascii=False)
+        bubble_string = json.dumps(welcome_msg, ensure_ascii=False)
         message = FlexMessage(alt_text="Welcome!", contents=FlexContainer.from_json(bubble_string))
         line_bot_api.reply_message(
             ReplyMessageRequest(
@@ -155,19 +167,44 @@ def handle_follow(event):
         )
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    with open("user_message.json", encoding='utf-8') as f:
-        flex_msg = json.load(f)
+    bubble_template = flex_msg["product_template"]
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
-        bubble_string = json.dumps(flex_msg, ensure_ascii=False)
         user_input = event.message.text
-        message = FlexMessage(alt_text="hello", contents=FlexContainer.from_json(bubble_string))
-        line_bot_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[message]
+        products = search_similar(user_input)
+        items = []
+        for p in products:
+            try:
+                bubble_str = json.dumps(bubble_template, ensure_ascii=False)
+                bubble_str = bubble_str.replace("{name}", p["name"])
+                bubble_str = bubble_str.replace("{price}", str(p["price_twd"]))
+                bubble_str = bubble_str.replace("{uri}", p["href"])
+                bubble = json.loads(bubble_str)
+                items.append(bubble)
+            except KeyError as e:  
+                logging.error(f"Missing key in product data: {e}")
+                continue
+        print(f"Found {len(items)} products for user input: {user_input}")
+        bubble_msg = {
+            "type": "bubble",
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": items
+            }
+        }
+        print(bubble_msg)
+        bubble_string = json.dumps(bubble_msg, ensure_ascii=False)
+        message = FlexMessage(alt_text="Search Results", contents=FlexContainer.from_json(bubble_string))
+        try:
+            line_bot_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[message]
+                )
             )
-        )
+        except Exception as e:
+            logging.error(f"Failed to reply message: {e}")
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
