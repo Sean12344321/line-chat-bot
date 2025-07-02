@@ -72,8 +72,8 @@ def scrape_ebay(keyword, max_items=100):
                     image_wrapper = p.find_element(By.CSS_SELECTOR, '.s-item__image-wrapper.image-treatment')
                     img_tag = image_wrapper.find_element(By.TAG_NAME, 'img')
                     image_url = img_tag.get_attribute('src')
-                    items.append({"E-Commerce site": "ebay", "name": name, "price_twd": price, "href": href, "image_url": image_url})
-                    logging.info(f"name: {name}, price_twd: {price}, href: {href}, image_url: {image_url}")
+                    items.append({"E-Commerce site": "ebay", "name": name, "price_twd": price, "href": href, "image_url": image_url, "keyword": keyword})
+                    logging.info(f"name: {name}, price_twd: {price}, href: {href}, image_url: {image_url}, keyword: {keyword}")
                     if len(items) >= max_items:
                         logging.info(f"Reached {max_items} items, stopping")
                         return items

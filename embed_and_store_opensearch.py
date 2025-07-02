@@ -75,18 +75,26 @@ def translate_productNames_to_english(items, source_lang='zh', target_lang='en')
 def create_opensearch_index(index_name: str = "products"):
     if not opensearch_client.indices.exists(index=index_name):
         index_body = {
-            "settings": {"index": {"knn": True}},
+            "settings": {
+                "index": {"knn": True}
+            },
             "mappings": {
                 "properties": {
-                    "EC": {"type": "keyword"}, "name": {"type": "text"},
-                    "price_twd": {"type": "float"},
-                    "href": {"type": "keyword"},
-                    "embedding": {"type": "knn_vector", "dimension": 1536, "method": {"name": "hnsw", "space_type": "cosinesimil", "engine": "lucene"}}
+                    "embedding": {
+                        "type": "knn_vector",
+                        "method": {
+                            "name": "hnsw",
+                            "space_type": "cosinesimil",
+                            "engine": "lucene",
+                        }
+                    }
                 }
             }
         }
         opensearch_client.indices.create(index=index_name, body=index_body)
         logging.info(f"Index created: {index_name}")
+    else:
+        logging.info(f"Index already exists: {index_name}")
 
 def store_items_to_opensearch(items: List[Dict], index_name: str = "products"):
     """ Store items in OpenSearch with embeddings."""
@@ -110,7 +118,8 @@ def delete_all_items_from_opensearch(index_name: str = "products"):
         logging.info(f"Deleted {response['deleted']} documents from index '{index_name}'")
     except Exception as e:
         logging.error(f"Failed to delete documents from index '{index_name}': {str(e)}")
-
+    # opensearch_client.indices.delete(index=index_name)
+    # logging.info(f"Deleted index '{index_name}'")
 
 def run_crawler():
     keyword = "laptop"
@@ -235,5 +244,5 @@ def handle_message(event):
             logging.error(f"Failed to reply message: {e}")
 
 if __name__ == "__main__":
-    # run_crawler()
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    run_crawler()
+    # app.run(host="0.0.0.0", port=5000, debug=True)

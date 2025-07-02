@@ -40,9 +40,9 @@ def scrape_pchome(keyword, max_items=100):
                     price = prod['price']
                     href = f"https://24h.pchome.com.tw/prod/{prod['Id']}"
                     image_url = f"https://cs-a.ecimg.tw/{prod['picB']}" if 'picB' in prod else None
-                    items.append({"E-Commerce site": "pchome", "name": name, "price_twd": price, "href": href, "image_url": image_url})
-                    logging.info(f"product: {name}, price_twd: {price}, url: {href}, image_url: {image_url}")
-                    
+                    items.append({"E-Commerce site": "pchome", "name": name, "price_twd": price, "href": href, "image_url": image_url, "keyword": keyword})
+                    logging.info(f"product: {name}, price_twd: {price}, url: {href}, image_url: {image_url}, keyword: {keyword}")
+
                     if len(items) >= max_items:
                         logging.info(f"Reached {max_items} items, stopping")
                         return items
