@@ -61,7 +61,7 @@
             },
             {
               "type": "text",
-              "text": "💻 科技：藍牙耳機、行動電源、無線滑鼠、鍵盤滑鼠組、充電線",
+              "text": "💻 科技：藍牙耳機、行動電源、無線滑鼠、筆電、充電線",
               "size": "sm",
               "wrap": true
             },
@@ -88,16 +88,13 @@
     }
   },
   "product_template": {
+    "type": "bubble",
     "hero": {
       "type": "image",
       "url": "{image_url}",
       "size": "full",
-      "aspectRatio": "1.51:1",
-      "aspectMode": "cover",
-      "action": {
-        "type": "uri",
-        "uri": "{uri}"
-      }
+      "aspectRatio": "20:13",
+      "aspectMode": "cover"
     },
     "body": {
       "type": "box",
@@ -109,33 +106,32 @@
           "text": "{name}",
           "wrap": true,
           "weight": "bold",
-          "size": "md"
-        },
-        {
-          "type": "text",
-          "text": "NT$ {price}",
-          "size": "sm",
-          "color": "#AAAAAA"
-        }
-      ]
-    },
-    "footer": {
-      "type": "box",
-      "layout": "vertical",
-      "spacing": "sm",
-      "contents": [
-        {
-          "type": "button",
-          "style": "link",
-          "height": "sm",
+          "size": "md",
+          "color": "#0000FF",
           "action": {
             "type": "uri",
-            "label": "前往商品頁",
             "uri": "{uri}"
           }
+        },
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "contents": [
+            {
+              "type": "text",
+              "text": "{price}",
+              "size": "sm",
+              "flex": 1
+            },
+            {
+              "type": "text",
+              "text": "{store}",
+              "size": "sm",
+              "align": "end"
+            }
+          ]
         }
-      ],
-      "flex": 0
+      ]
     }
   }
 }

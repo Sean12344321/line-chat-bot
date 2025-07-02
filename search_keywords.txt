@@ -9,7 +9,7 @@
 藍牙耳機
 行動電源
 無線滑鼠
-鍵盤滑鼠組
+筆電
 充電線
 
 # 衣服
@@ -18,3 +18,25 @@
 速乾衣
 運動短褲
 連帽風衣
+
+
+# Fitness
+Treadmill
+Dumbbells
+Yoga mat
+Resistance bands
+Rowing machine
+
+# Technology
+Bluetooth earphones
+Power bank
+Wireless mouse
+laptop
+Charging cable
+
+# Clothing
+Jacket
+Thermal shirt
+Quick-dry shirt
+Sports shorts
+Hooded windbreaker

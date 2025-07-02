@@ -12,7 +12,7 @@ from linebot.v3.exceptions import InvalidSignatureError
 from scrapers.ebay import scrape_ebay
 from scrapers.momo import scrape_momo
 from scrapers.pchome import scrape_pchome
-import json
+import json, copy
 
 load_dotenv()
 
@@ -79,9 +79,9 @@ def create_opensearch_index(index_name: str = "products"):
             "mappings": {
                 "properties": {
                     "EC": {"type": "keyword"}, "name": {"type": "text"},
-                    "price_usd": {"type": "float"}, "price_twd": {"type": "float"},
+                    "price_twd": {"type": "float"},
                     "href": {"type": "keyword"},
-                    "embedding": {"type": "knn_vector", "dimension": 1536, "method": {"name": "hnsw", "space_type": "cosinesimil", "engine": "nmslib"}}
+                    "embedding": {"type": "knn_vector", "dimension": 1536, "method": {"name": "hnsw", "space_type": "cosinesimil", "engine": "lucene"}}
                 }
             }
         }
@@ -92,7 +92,7 @@ def store_items_to_opensearch(items: List[Dict], index_name: str = "products"):
     """ Store items in OpenSearch with embeddings."""
     for item in items:
         try:
-            doc = {"E-Commerce site": item["E-Commerce site"], "name": item["name"],  "price_twd": item["price_twd"], "href": item["href"], "embedding": item["embedding"]}
+            doc = {"E-Commerce site": item["E-Commerce site"], "name": item["name"],  "price_twd": item["price_twd"], "href": item["href"], "image_url": item["image_url"], "embedding": item["embedding"]}
             opensearch_client.index(index=index_name, id=item["href"], body=doc) #if href repeated, it will overwrite the existing document 
             logging.info(f"Item stored: {item['name']}") 
         except Exception as e:
@@ -138,20 +138,54 @@ def search_similar(user_input: str, index_name: str = "products", top_k: int = 5
                 "knn": {
                     "embedding": {
                         "vector": embedding,
-                        "k": top_k
+                        "k": top_k,
                     }
                 }
             },
-            "_source": ["E-Commerce site", "name", "price_twd", "href"]
+            "_source": ["E-Commerce site", "name", "price_twd", "href", "image_url"]
         }
         response = opensearch_client.search(index=index_name, body=query)
         return [hit["_source"] for hit in response["hits"]["hits"]]
-    except Exception as e:
+    except Exception as e: 
         logging.error(f"Search failed: {e}")
-        return []
+        return []  
+      
+def build_bubble(product: Dict, template: Dict) -> Dict: 
+    try: 
+        bubble_str = copy.deepcopy(template)
+        # dict-based approach to auto-escape all special characters
+        bubble_str["hero"]["url"] = product.get("image_url", "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQsI1LNctDqWA1iEu24tUcfbiWZKqabrF7moQ&s")
+        bubble_str["body"]["contents"][0]["text"] = product["name"]
+        bubble_str["body"]["contents"][0]["action"]["uri"] = product["href"]
+        bubble_str["body"]["contents"][1]["contents"][0]["text"] = f"NT$ {product['price_twd']}"
+        bubble_str["body"]["contents"][1]["contents"][1]["text"] = product["E-Commerce site"].upper()
+        return bubble_str
+    except KeyError as e:  
+        logging.error(f"Missing key in product data: {e}")
+        return None
 
-with open("flex_message.json", encoding='utf-8') as f:
-    flex_msg = json.load(f)
+def build_flex_message(user_input: str, template: Dict) -> FlexMessage:
+    products = search_similar(user_input)
+    bubbles = []
+
+    for product in products:
+        bubble = build_bubble(product, template)
+        if bubble:
+            bubbles.append(bubble)
+
+    logging.info(f"Found {len(bubbles)} products for user input: {user_input}")
+
+    bubble_msg = {
+        "type": "carousel",
+        "contents": bubbles
+    }
+    print(bubble_msg)
+    return FlexMessage(
+        alt_text="Search Results",
+        contents=FlexContainer.from_json(json.dumps(bubble_msg, ensure_ascii=False))
+    )
+
+
 
 @app.route("/", methods=['POST'])
 def callback():
@@ -166,6 +200,9 @@ def callback():
 
     return 'OK'
 
+with open("flex_message.json", encoding='utf-8') as f:
+    flex_msg = json.load(f)
+
 @handler.add(FollowEvent)
 def handle_follow(event):
     welcome_msg = flex_msg["welcome"]
@@ -179,38 +216,15 @@ def handle_follow(event):
                 messages=[message]
             )
         )
+        
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
-    bubble_template = flex_msg["product_template"]
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
         user_input = event.message.text
-        products = search_similar(user_input)
-        items = []
-        for p in products:
-            try:
-                bubble_str = json.dumps(bubble_template, ensure_ascii=False)
-                bubble_str = bubble_str.replace("{name}", p["name"])
-                bubble_str = bubble_str.replace("{price}", str(p["price_twd"]))
-                bubble_str = bubble_str.replace("{uri}", p["href"])
-                bubble = json.loads(bubble_str)
-                items.append(bubble)
-            except KeyError as e:  
-                logging.error(f"Missing key in product data: {e}")
-                continue
-        print(f"Found {len(items)} products for user input: {user_input}")
-        bubble_msg = {
-            "type": "bubble",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": items
-            }
-        }
-        print(bubble_msg)
-        bubble_string = json.dumps(bubble_msg, ensure_ascii=False)
-        message = FlexMessage(alt_text="Search Results", contents=FlexContainer.from_json(bubble_string))
         try:
+            message = build_flex_message(user_input, flex_msg["product_template"])
+            print(message)
             line_bot_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
@@ -221,8 +235,5 @@ def handle_message(event):
             logging.error(f"Failed to reply message: {e}")
 
 if __name__ == "__main__":
-    # app.run(host="0.0.0.0", port=5000, debug=True)
-
     # run_crawler()
-    # store_items_to_opensearch(items)
-    # print(items)
+    app.run(host="0.0.0.0", port=5000, debug=True)

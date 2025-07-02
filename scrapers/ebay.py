@@ -10,7 +10,7 @@ import time, random, logging
 
 logging.basicConfig(level=logging.INFO)
 
-def scrape_ebay(keyword, max_items=200):
+def scrape_ebay(keyword, max_items=100):
     # Configure Chrome options for Linux
     options = Options()
     options.add_argument('--headless')  
