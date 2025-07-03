@@ -121,7 +121,7 @@ def scrape_ebay(keyword, max_items=100):
 
 if __name__ == "__main__":
     data = []
-    max_attempts = 3
+    max_attempts = 10
     attempts = 0
     while not data and attempts < max_attempts:
         data = scrape_ebay("t-shirt", max_items=100)

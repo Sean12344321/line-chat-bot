@@ -8,3 +8,5 @@ Requests
 requests_aws4auth
 selenium
 webdriver_manager
+pytest 
+pytest-mock
