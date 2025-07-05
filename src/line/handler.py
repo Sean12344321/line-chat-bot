@@ -6,7 +6,7 @@ from linebot.v3 import WebhookHandler
 from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent
 from linebot.v3.messaging import FlexMessage, ReplyMessageRequest, Configuration, ApiClient, MessagingApi, FlexContainer
 from linebot.v3.exceptions import InvalidSignatureError
-from src.opensearch.embed_and_store import search_similar
+from opensearch.function import search_top_k_similar_items_from_opensearch
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -31,7 +31,7 @@ def build_bubble(product: Dict, template: Dict) -> Dict:
 
 def build_flex_message(user_input: str, template: Dict) -> FlexMessage:
     """Build a Flex Message carousel from search results."""
-    products = search_similar(user_input)
+    products = search_top_k_similar_items_from_opensearch(user_input)
     bubbles = [bubble for product in products if (bubble := build_bubble(product, template))]
     logging.info(f"Found {len(bubbles)} products for user input: {user_input}")
     bubble_msg = {"type": "carousel", "contents": bubbles}
