@@ -2,7 +2,7 @@ from typing import List, Dict
 from opensearchpy import OpenSearch, RequestsHttpConnection
 from requests_aws4auth import AWS4Auth
 from dotenv import load_dotenv
-import os, logging, boto3
+import os, logging, boto3, json
 from datetime import datetime, timedelta
 import numpy as np
 load_dotenv()
@@ -19,7 +19,9 @@ opensearch_client = OpenSearch(
     connection_class=RequestsHttpConnection,
     timeout=30,
 )
-
+PROMPT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../data/system_prompt.txt'))
+with open(PROMPT_PATH, 'r') as file:
+    system_prompt = file.read()
 def create_index_for_opensearch(index_name: str = "products"):
     """Create an OpenSearch index with k-NN settings if it doesn't exist."""
     if not opensearch_client.indices.exists(index=index_name):
@@ -150,50 +152,83 @@ def delete_all_items_from_opensearch(index_name: str = "products"):
     except Exception as e:
         logging.error(f"Failed to delete documents from index '{index_name}': {str(e)}")
 
-def search_top_k_similar_items_from_opensearch(user_input: str, index_name: str = "products", top_k: int = 5) -> List[Dict]:
+def find_k_similar_items(opensearch_client, json_response: dict, embedding: list, index_name: str = "products") -> list:
+    """Execute k-NN search to retrieve exact counts for each ec_commercesite based on JSON response."""
+    try:
+        results = []
+        site_counts = [
+            ("pchome", json_response.get("pchome_count", 0)),
+            ("ebay", json_response.get("ebay_count", 0)),
+            ("momo", json_response.get("momo_count", 0))
+        ]
+        
+        for site, count in site_counts:
+            if count > 0:
+                filters = [{"term": {"E-Commerce site": site}}]
+                if json_response.get("keyword") and json_response["keyword"] != "":
+                    filters.append({"term": {"keyword": json_response["keyword"]}})
+                if json_response.get("price_floor") and json_response["price_floor"] != "":
+                    filters.append({"range": {"price_twd": {"gte": int(json_response["price_floor"])}}})
+                if json_response.get("price_ceiling") and json_response["price_ceiling"] != "":
+                    filters.append({"range": {"price_twd": {"lte": int(json_response["price_ceiling"])}}})
+                print(filters)
+                query = {
+                    "size": count,
+                    "query": {
+                        "knn":{
+                            "embedding": {
+                                "vector": embedding,
+                                "k": count,
+                                "filter": {
+                                    "bool": {
+                                        "must": filters
+                                    }
+                                }    
+                            },
+                        }
+
+                    },
+                    "_source": ["E-Commerce site", "name", "price_twd", "href", "image_url", "keyword"]
+                }
+                
+                response = opensearch_client.search(index=index_name, body=query)
+                hits = response["hits"]["hits"]
+                results.extend([hit["_source"] for hit in hits])
+                logging.info(f"Found {len(hits)} items for {site} in index '{index_name}'")
+        return results
+    except Exception as e:
+        logging.error(f"Search failed in index '{index_name}': {str(e)}")
+        return []
+
+def search_top_k_similar_items_from_opensearch(user_prompt: str, index_name: str = "products") -> List[Dict]:
     """Search for similar products using k-NN based on user input."""
     try:
         from openai import OpenAI
         openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        embedding = openai_client.embeddings.create(input=user_input, model=os.getenv("OPENAI_MODEL")).data[0].embedding
-        find_k_similar_items_query = {
-            "size": top_k,
-            "query": {
-                "bool": {
-                    "filter": [
-                        {
-                            "term": {
-                                "E-Commerce site": "pchome"
-                            }
-                        }
-                    ],
-                    "must": [
-                        {
-                            "knn": {
-                                "embedding": {
-                                    "vector": embedding,
-                                    "k": top_k
-                                }
-                            }
-                        }
-                    ]
+        embedding = openai_client.embeddings.create(input=user_prompt, model=os.getenv("OPENAI_EMBEDDING_MODEL")).data[0].embedding
+        reply = openai_client.chat.completions.create(
+            model=os.getenv("OPENAI_CHAT_MODEL"),
+            messages=[
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user",
+                    "content": user_prompt
                 }
-            },
-            "_source": ["E-Commerce site", "name", "price_twd", "href", "image_url", "keyword"]
-        }
-        response = opensearch_client.search(index=index_name, body=find_k_similar_items_query)
-        return [hit["_source"] for hit in response["hits"]["hits"]]
+            ]
+        )
+        response_dict = json.loads(reply.choices[0].message.content)
+        logging.info(f"Parsed response: {response_dict}")
+        response = find_k_similar_items(
+            opensearch_client,
+            response_dict,
+            embedding,
+            index_name=index_name
+        )
+        return response
     except Exception as e:
         logging.error(f"Search failed: {e}")
         return []
-    
-
-from opensearchpy.exceptions import NotFoundError
-
-def safe_index_exists(index):
-    try:
-        opensearch_client.indices.get(index=index)
-        return True
-    except NotFoundError:
-        return False
-safe_index_exists("products")
+print(search_top_k_similar_items_from_opensearch("我想要一抬價格大於40000，小於60000的至尊高檔筆電，不要ebay的。"))
