@@ -2,6 +2,7 @@ import os, sys, logging, time
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from datetime import datetime
+from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
 from src.scrapers.momo import scrape_momo
@@ -16,59 +17,48 @@ from opensearch.function import (
     search_top_k_similar_items_from_opensearch,
 )
 
-
-load_dotenv()
-logging.basicConfig(level=logging.INFO)
+env_path = Path(__file__).resolve().parent.parent.parent / '.env'
+load_dotenv(dotenv_path=env_path)
+logging.basicConfig(level=logging.INFO) 
 
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# def translate_text(text, source_lang='zh', target_lang='en'):
-#     """Translate text using AWS Translate."""
-#     try:
-#         translate = boto3.client('translate')
-#         response = translate.translate_text(
-#             Text=text,
-#             SourceLanguageCode=source_lang,
-#             TargetLanguageCode=target_lang
-#         )
-#         translated_text = response['TranslatedText']
-#         logging.info(f"Translated '{text}' to '{translated_text}'")
-#         return translated_text
-#     except Exception as e:
-#         logging.error(f"Translation failed for '{text}': {e}")
-#         return text
-
-# def translate_productNames_to_english(items, source_lang='zh', target_lang='en'):
-#     """Normalize product names by translating to target language."""
-#     normalized_items = []
-#     for item in items:
-#         if item["E-Commerce site"] == "ebay":
-#             normalized_items.append(item)
-#             continue
-#         item_copy = item.copy()
-#         item_copy['name'] = translate_text(item['name'], source_lang, target_lang)
-#         normalized_items.append(item_copy)
-#     return normalized_items
-
 def run_crawler():
     """Run scraping, translation, and storage for all e-commerce sites."""
-    keyword = "laptop"
+    with open("./data/search_keywords.txt", "r", encoding="utf-8") as file:
+        lines = file.readlines()
     retry_limit = 3
+    all_items = []
     for attempt in range(retry_limit):
         try:
             create_index_for_opensearch()
-            all_items = scrape_ebay(keyword) + scrape_momo(keyword) + scrape_pchome(keyword)
+            keywords = {
+                "Fitness": {"zh": [], "en": []},
+                "Technology": {"zh": [], "en": []},
+                "Clothing": {"zh": [], "en": []}
+            }
+            current_category = None
+            for line in lines:
+                line = line.strip()
+                if line.startswith("#"):
+                    current_category = line[1:].strip().split('-')
+                elif line and current_category:
+                    keywords[current_category[0]][current_category[1]].append(line)
+            for category in keywords:
+                for zh_keyword, en_keyword in zip(keywords[category]["zh"], keywords[category]["en"]):
+                    try:
+                        all_items.extend(scrape_ebay(en_keyword))
+                        all_items.extend(scrape_momo(en_keyword, zh_keyword))
+                        all_items.extend(scrape_pchome(en_keyword, zh_keyword))
+                    except Exception as e:
+                        logging.error(f"failed for {zh_keyword}/{en_keyword}: {str(e)}")
             current_time = datetime.now().isoformat()
             for item in all_items:
                 item["timestamp"] = current_time
             logging.info(f"Collected {len(all_items)} items from all e-commerce sites")
-
-            # all_items = translate_productNames_to_english(all_items, source_lang='zh', target_lang='en')
-            # logging.info("All items translated to English")
-
             for item in all_items:
-                embedding = openai_client.embeddings.create(input=item["name"], model=os.getenv("OPENAI_MODEL")).data[0].embedding
-                item["embedding"] = embedding
+                embedding = openai_client.embeddings.create(input=item["name"], model=os.getenv("OPENAI_EMBEDDING_MODEL")).data[0].embedding
+                item["embedding"] = embedding 
                 logging.info(f"Created embedding for item: {item['name']}")
             logging.info("All items embeddings have been created")
 
@@ -87,4 +77,5 @@ def run_crawler():
             time.sleep(3) 
 
 if __name__ == "__main__":
-    run_crawler()
+    # run_crawler() 
+    get_document_count_from_opensearch(e_commercesite="ebay", keyword="yoga mat")

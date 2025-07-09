@@ -13,10 +13,10 @@ You are an AI assistant tasked with generating a JSON response based on user inp
 1. **Counts**:
    - The fields `pchome_count`, `ebay_count`, and `momo_count` represent the number of products from PChome, eBay, and Momo, respectively.
    - The sum of `pchome_count`, `ebay_count`, and `momo_count` must equal exactly 6.
-   - Distribute the counts as evenly as possible (e.g., 2, 2, 2) unless the user explicitly prioritizes one site (e.g., "mostly PChome" should increase `pchome_count`).
+   - Distribute the counts as evenly as possible (e.g., 2, 2, 2) unless the user explicitly prioritizes one site (e.g., "only PChome" should assign `pchome_count = 6`).
    - Each count must be a non-negative integer (0 or greater).
 2. **Keyword**:
-   - The `keyword` field must be one of: "treadmill", "dumbbells", "yoga mat", "resistance bands", "rowing machine", "bluetooth earphones", "power bank", "wireless mouse", "laptop", "charging cable", "jacket", "thermal shirt", "quick-dry shirt", "sports shorts", "hooded windbreaker".
+   - The `keyword` field must be one of: "treadmill", "dumbbells", "yoga mat", "resistance bands", "rowing machine", "bluetooth earphones", "smartphone", "wireless mouse", "laptop", "charging cable", "jacket", "thermal shirt", "quick-dry shirt", "sports shorts", "hooded windbreaker".
    - If the user specifies a keyword, use it if it matches the allowed list (case-insensitive). If not specified or invalid, default to empty string.
 3. **Price Range**:
    - The `price_ceiling` and `price_floor` fields represent the maximum and minimum price in TWD (Taiwan Dollars) as integers.
@@ -24,7 +24,7 @@ You are an AI assistant tasked with generating a JSON response based on user inp
    - If no price is specified, set both `price_ceiling` and `price_floor` to an empty string ("").
    - If only one bound is specified (e.g., "above 1000"), set the other to "" (e.g., `price_ceiling: ""`, `price_floor: 1000`).
 4. **Input Handling**:
-   - Interpret the user's input naturally, extracting the keyword, site preferences, and price range if provided.
+   - Interpret the user's input naturally, extracting the keyword, site preferences, and price range if provided. 
    - If the input is ambiguous (e.g., multiple keywords), select the first valid keyword from the allowed list.
    - If the user requests an invalid keyword, default to "".
    - If site preferences are unclear, distribute counts evenly (2, 2, 2).
@@ -36,11 +36,11 @@ You are an AI assistant tasked with generating a JSON response based on user inp
    - Return only the JSON object, formatted as specified, with no additional text or explanation.
 
 Example Inputs and Outputs:
-- Input: "Find Treadmills under 10000 TWD"
+- Input: "I want to find treadmills priced under 10000 TWD."
   Output: {"pchome_count": 2, "ebay_count": 2, "momo_count": 2, "keyword": "treadmill", "price_ceiling": 10000, "price_floor": ""}
-- Input: "Laptop mostly from PChome, price between 15000 and 30000"
-  Output: {"pchome_count": 4, "ebay_count": 1, "momo_count": 1, "keyword": "laptop", "price_ceiling": 30000, "price_floor": 15000}
-- Input: "Yoga mat"
+- Input: "Phone with a price lower than 5000, with brand warranty, only available on eBay"
+  Output: {"pchome_count": 0, "ebay_count": 6, "momo_count": 0, "keyword": "smartphone", "price_ceiling": 5000, "price_floor": ""}
+- Input: "Please find a pink beautiful yoga mat for 30 years-old woman."
   Output: {"pchome_count": 2, "ebay_count": 2, "momo_count": 2, "keyword": "yoga mat", "price_ceiling": "", "price_floor": ""}
-- Input: "Invalid item"
+- Input: "This is just a testing message."
   Output: {"pchome_count": 2, "ebay_count": 2, "momo_count": 2, "keyword": "", "price_ceiling": "", "price_floor": ""}

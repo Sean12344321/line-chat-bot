@@ -8,7 +8,7 @@ import time, logging
 
 logging.basicConfig(level=logging.INFO)
 
-def scrape_momo(keyword, max_items=100):
+def scrape_momo(en_keyword, zh_keyword, max_items=100):
     # Configure Chrome options for Linux
     options = Options()
     options.add_argument('--headless')  
@@ -25,7 +25,7 @@ def scrape_momo(keyword, max_items=100):
         logging.error(f"Failed to initialize ChromeDriver: {e}")
         return []
     
-    search_url = f"https://www.momoshop.com.tw/search/searchShop.jsp?keyword={keyword}"
+    search_url = f"https://www.momoshop.com.tw/search/searchShop.jsp?keyword={zh_keyword}"
     items = []
 
     try:
@@ -47,8 +47,8 @@ def scrape_momo(keyword, max_items=100):
                     price = p.find_element(By.CLASS_NAME, 'price').text.replace(",", "")
                     href = p.find_element(By.CLASS_NAME, 'goods-img-url').get_attribute('href')
                     image_url = p.find_element(By.CLASS_NAME, 'prdImg').get_attribute('src')
-                    items.append({"E-Commerce site": "momo", "name": name, "price_twd": int(price), "href": href, "image_url": image_url, "keyword": keyword})
-                    logging.info(f"name: {name}, price_twd: {price}, image_url: {image_url}, keyword: {keyword}")
+                    items.append({"e_commercesite": "momo", "name": name, "price_twd": int(price), "href": href, "image_url": image_url, "keyword": en_keyword})
+                    logging.info(f"name: {name}, price_twd: {price}, image_url: {image_url}, keyword: {en_keyword}")
                     if len(items) >= max_items:
                         logging.info(f"Reached maximum items limit: {max_items}")
                         driver.quit()

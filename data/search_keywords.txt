@@ -1,42 +1,24 @@
-# 健身
+#Fitness-zh
 跑步機
 啞鈴
 瑜伽墊
 彈力帶
 划船機
-
-# 科技
+#Technology-zh
 藍牙耳機
-行動電源
+智慧型手機
 無線滑鼠
 筆電
 充電線
-
-# 衣服
-外套
-發熱衣
-速乾衣
-運動短褲
-連帽風衣
-
-
-# Fitness
-Treadmill
-Dumbbells
-Yoga mat
-Resistance bands
-Rowing machine
-
-# Technology
-Bluetooth earphones
-Power bank
-Wireless mouse
+#Fitness-en
+treadmill
+dumbbells
+yoga mat
+resistance bands
+rowing machine
+#Technology-en
+bluetooth earphones
+smartphone
+wireless mouse
 laptop
-Charging cable
-
-# Clothing
-Jacket
-Thermal shirt
-Quick-dry shirt
-Sports shorts
-Hooded windbreaker
+charging cable

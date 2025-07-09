@@ -4,13 +4,13 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
-def scrape_pchome(keyword, max_items=100):
+def scrape_pchome(en_keyword, zh_keyword, max_items=100):
     items = []
     base_url = "https://ecshweb.pchome.com.tw/search/v3.3/all/results"
     
     # Fetch the first page to get total pages
     params = {
-        "q": keyword,
+        "q": zh_keyword,
         "page": 1,
         "sort": "sale/dc"
     }
@@ -40,8 +40,8 @@ def scrape_pchome(keyword, max_items=100):
                     price = prod['price']
                     href = f"https://24h.pchome.com.tw/prod/{prod['Id']}"
                     image_url = f"https://cs-a.ecimg.tw/{prod['picB']}" if 'picB' in prod else None
-                    items.append({"E-Commerce site": "pchome", "name": name, "price_twd": price, "href": href, "image_url": image_url, "keyword": keyword})
-                    logging.info(f"product: {name}, price_twd: {price}, url: {href}, image_url: {image_url}, keyword: {keyword}")
+                    items.append({"e_commercesite": "pchome", "name": name, "price_twd": price, "href": href, "image_url": image_url, "keyword": en_keyword})
+                    logging.info(f"product: {name}, price_twd: {price}, url: {href}, image_url: {image_url}, keyword: {en_keyword}")
 
                     if len(items) >= max_items:
                         logging.info(f"Reached {max_items} items, stopping")
