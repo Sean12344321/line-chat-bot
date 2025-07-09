@@ -78,4 +78,4 @@ def run_crawler():
 
 if __name__ == "__main__":
     # run_crawler() 
-    get_document_count_from_opensearch(e_commercesite="ebay", keyword="yoga mat")
+    delete_all_items_from_opensearch()

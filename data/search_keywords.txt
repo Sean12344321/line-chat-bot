@@ -3,22 +3,30 @@
 啞鈴
 瑜伽墊
 彈力帶
-划船機
+握力器
+健身球
+跳繩
 #Technology-zh
+平板電腦
 藍牙耳機
 智慧型手機
-無線滑鼠
+滑鼠
 筆電
 充電線
+行動電源
 #Fitness-en
 treadmill
-dumbbells
+dumbbell
 yoga mat
-resistance bands
-rowing machine
+resistance band
+hand grip strengthener
+exercise ball
+jump rope
 #Technology-en
-bluetooth earphones
+tablet
+bluetooth earphone
 smartphone
-wireless mouse
+mouse
 laptop
 charging cable
+power bank

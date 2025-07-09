@@ -7,15 +7,15 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import numpy as np
 logging.basicConfig(level=logging.INFO)
-
+ 
 # Initialize OpenSearch client
-env_path = Path(__file__).resolve().parent.parent.parent / '.env'
+env_path = Path(__file__).resolve().parent.parent.parent / '.env' 
 load_dotenv(dotenv_path=env_path)
 credentials = boto3.Session().get_credentials()
 aws_auth = AWS4Auth(credentials.access_key, credentials.secret_key, 'ap-northeast-1', 'es', session_token=credentials.token)
 opensearch_client = OpenSearch(
     hosts=[{'host': os.getenv("OpenSearch_Domain"), 'port': 443}],
-    http_auth=aws_auth,
+    http_auth=aws_auth, 
     use_ssl=True,
     verify_certs=True,
     connection_class=RequestsHttpConnection,
@@ -217,7 +217,7 @@ def find_k_similar_items(opensearch_client, json_response: dict, embedding: list
                     },
                     "_source": ["e_commercesite", "name", "price_twd", "href", "image_url", "keyword"]
                 }
-                print(query)
+                # print(query)
                 
                 response = opensearch_client.search(index=index_name, body=query)
                 hits = response["hits"]["hits"]

@@ -16,7 +16,7 @@ You are an AI assistant tasked with generating a JSON response based on user inp
    - Distribute the counts as evenly as possible (e.g., 2, 2, 2) unless the user explicitly prioritizes one site (e.g., "only PChome" should assign `pchome_count = 6`).
    - Each count must be a non-negative integer (0 or greater).
 2. **Keyword**:
-   - The `keyword` field must be one of: "treadmill", "dumbbells", "yoga mat", "resistance bands", "rowing machine", "bluetooth earphones", "smartphone", "wireless mouse", "laptop", "charging cable", "jacket", "thermal shirt", "quick-dry shirt", "sports shorts", "hooded windbreaker".
+   - The `keyword` field must be one of: "treadmill", "dumbbell", "yoga mat", "resistance band", "hand grip strengthener", "exercise ball", "jump rope", "tablet", "bluetooth earphone", "smartphone", "mouse", "laptop", "charging cable", "power bank".
    - If the user specifies a keyword, use it if it matches the allowed list (case-insensitive). If not specified or invalid, default to empty string.
 3. **Price Range**:
    - The `price_ceiling` and `price_floor` fields represent the maximum and minimum price in TWD (Taiwan Dollars) as integers.
@@ -36,11 +36,11 @@ You are an AI assistant tasked with generating a JSON response based on user inp
    - Return only the JSON object, formatted as specified, with no additional text or explanation.
 
 Example Inputs and Outputs:
-- Input: "I want to find treadmills priced under 10000 TWD."
+- Input: "I want to find a treadmill priced under 10000 TWD."
   Output: {"pchome_count": 2, "ebay_count": 2, "momo_count": 2, "keyword": "treadmill", "price_ceiling": 10000, "price_floor": ""}
 - Input: "Phone with a price lower than 5000, with brand warranty, only available on eBay"
   Output: {"pchome_count": 0, "ebay_count": 6, "momo_count": 0, "keyword": "smartphone", "price_ceiling": 5000, "price_floor": ""}
 - Input: "Please find a pink beautiful yoga mat for 30 years-old woman."
   Output: {"pchome_count": 2, "ebay_count": 2, "momo_count": 2, "keyword": "yoga mat", "price_ceiling": "", "price_floor": ""}
-- Input: "This is just a testing message."
+- Input: "This is just a test message."
   Output: {"pchome_count": 2, "ebay_count": 2, "momo_count": 2, "keyword": "", "price_ceiling": "", "price_floor": ""}
