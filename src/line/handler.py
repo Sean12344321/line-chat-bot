@@ -10,11 +10,19 @@ from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent
 from linebot.v3.messaging import FlexMessage, ReplyMessageRequest, Configuration, ApiClient, MessagingApi, FlexContainer, TextMessage
 from linebot.v3.exceptions import InvalidSignatureError
 from opensearch.function import search_top_k_similar_items_from_opensearch
-
+from apscheduler.schedulers.background import BackgroundScheduler
+from scrapers.main import run_crawler
 env_path = Path(__file__).resolve().parent.parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
 logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
+
+def start_scheduler():
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(run_crawler, 'cron', hour=4, minute=0, day='*/2')
+    scheduler.start()
+    print("APScheduler started for crawler.")
+
 configuration = Configuration(access_token=os.getenv('LINE_TOKEN'))
 handler = WebhookHandler(os.getenv('LINE_SECRET'))
 
@@ -80,7 +88,7 @@ def callback():
         abort(400)
     return 'OK'
 
-with open("../../data/flex_message.json", encoding='utf-8') as f:
+with open("./data/flex_message.json", encoding='utf-8') as f:
     flex_msg = json.load(f)
 
 @handler.add(FollowEvent)
@@ -126,5 +134,7 @@ def handle_message(event):
                 )
             )
 
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)  
+    app.run(host="0.0.0.0", port=5000)  
+    start_scheduler()
