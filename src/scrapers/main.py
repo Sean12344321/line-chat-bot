@@ -10,7 +10,7 @@ from src.scrapers.ebay import scrape_ebay
 from src.scrapers.pchome import scrape_pchome
 from opensearch.function import (
     create_index_for_opensearch,
-    store_and_replace_items_from_opensearch,
+    store_and_replace_items_from_opensearch, 
     delete_outdated_items_from_opensearch,
     delete_all_items_from_opensearch,
     get_document_count_from_opensearch,
@@ -35,7 +35,6 @@ def run_crawler():
             keywords = {
                 "Fitness": {"zh": [], "en": []},
                 "Technology": {"zh": [], "en": []},
-                "Clothing": {"zh": [], "en": []}
             }
             current_category = None
             for line in lines:
@@ -77,5 +76,4 @@ def run_crawler():
             time.sleep(3) 
 
 if __name__ == "__main__":
-    # run_crawler() 
-    delete_all_items_from_opensearch()
+    run_crawler() 

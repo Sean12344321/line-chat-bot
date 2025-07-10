@@ -38,7 +38,7 @@ You are an AI assistant tasked with generating a JSON response based on user inp
 Example Inputs and Outputs:
 - Input: "I want to find a treadmill priced under 10000 TWD."
   Output: {"pchome_count": 2, "ebay_count": 2, "momo_count": 2, "keyword": "treadmill", "price_ceiling": 10000, "price_floor": ""}
-- Input: "Phone with a price lower than 5000, with brand warranty, only available on eBay"
+- Input: "Iphone 12 with a price lower than 5000, with brand warranty, only available on eBay"
   Output: {"pchome_count": 0, "ebay_count": 6, "momo_count": 0, "keyword": "smartphone", "price_ceiling": 5000, "price_floor": ""}
 - Input: "Please find a pink beautiful yoga mat for 30 years-old woman."
   Output: {"pchome_count": 2, "ebay_count": 2, "momo_count": 2, "keyword": "yoga mat", "price_ceiling": "", "price_floor": ""}

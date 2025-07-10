@@ -124,6 +124,14 @@ def store_and_replace_items_from_opensearch(items: List[Dict], index_name: str =
                         "embedding": {
                             "vector": item["embedding"],
                             "k": 3,
+                            "filter": {
+                                "bool": {
+                                    "must": [
+                                        {"match": {"keyword": item["keyword"]}},
+                                        {"match": {"e_commercesite": item["e_commercesite"]}}
+                                    ]
+                                }
+                            }    
                         }
                     }
                 },
@@ -138,7 +146,6 @@ def store_and_replace_items_from_opensearch(items: List[Dict], index_name: str =
             response = opensearch_client.search(index=index_name, body=most_similar_item_query)
             hits = response["hits"]["hits"]
 
-            # Check top 3 similar items and delete those with similarity > 0.95
             for hit in hits:
                 similar_item_id = hit["_id"]
                 logging.info(f"Checking similar item: {hit['_source']['name']} (ID: {similar_item_id})")
@@ -147,12 +154,10 @@ def store_and_replace_items_from_opensearch(items: List[Dict], index_name: str =
                     deleted_item_counts += 1
                     opensearch_client.delete(index=index_name, id=similar_item_id)
                     logging.info(f"Item deleted: {hit['_source']['name']} (similar to {item['name']})")
-            
-            # Store the new item
             new_item_counts += 1
             opensearch_client.index(index=index_name, body=doc)
             logging.info(f"Item stored: {item['name']}")
-            time.sleep(0.1)
+            time.sleep(0.5)  # Sleep to avoid rate limiting
         except Exception as e:
             logging.error(f"Failed to store item: {item['name']} - {str(e)}")
     logging.info(f"Total items deleted: {deleted_item_counts}, new items stored: {new_item_counts} in index '{index_name}'")
@@ -180,7 +185,7 @@ def delete_all_items_from_opensearch(index_name: str = "products"):
     except Exception as e:
         logging.error(f"Failed to delete documents from index '{index_name}': {str(e)}")
 
-def find_k_similar_items(opensearch_client, json_response: dict, embedding: list, index_name: str = "products") -> list:
+def find_k_similar_items(opensearch_client, json_response: dict, en_embedding: list, zh_embedding: list, index_name: str = "products") -> list:
     """Execute k-NN search to retrieve exact counts for each e_comercesite based on JSON response."""
     try:
         results = []
@@ -204,7 +209,7 @@ def find_k_similar_items(opensearch_client, json_response: dict, embedding: list
                     "query": {
                         "knn":{
                             "embedding": {
-                                "vector": embedding,
+                                "vector": en_embedding if site == "ebay" else zh_embedding,
                                 "k": count,
                                 "filter": {
                                     "bool": {
@@ -217,7 +222,7 @@ def find_k_similar_items(opensearch_client, json_response: dict, embedding: list
                     },
                     "_source": ["e_commercesite", "name", "price_twd", "href", "image_url", "keyword"]
                 }
-                # print(query)
+                print(query)
                 
                 response = opensearch_client.search(index=index_name, body=query)
                 hits = response["hits"]["hits"]
@@ -228,12 +233,13 @@ def find_k_similar_items(opensearch_client, json_response: dict, embedding: list
         logging.error(f"Search failed in index '{index_name}': {str(e)}")
         return []
 
-def search_top_k_similar_items_from_opensearch(user_prompt: str, index_name: str = "products") -> List[Dict]:
+def search_top_k_similar_items_from_opensearch(en_userprompt: str, zh_userprompt: str, index_name: str = "products") -> List[Dict]:
     """Search for similar products using k-NN based on user input."""
     try:
         from openai import OpenAI
         openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        embedding = openai_client.embeddings.create(input=user_prompt, model=os.getenv("OPENAI_EMBEDDING_MODEL")).data[0].embedding
+        en_embedding = openai_client.embeddings.create(input=en_userprompt, model=os.getenv("OPENAI_EMBEDDING_MODEL")).data[0].embedding
+        zh_embedding = openai_client.embeddings.create(input=zh_userprompt, model=os.getenv("OPENAI_EMBEDDING_MODEL")).data[0].embedding
         reply = openai_client.chat.completions.create(
             model=os.getenv("OPENAI_CHAT_MODEL"),
             messages=[
@@ -243,7 +249,7 @@ def search_top_k_similar_items_from_opensearch(user_prompt: str, index_name: str
                 },
                 { 
                     "role": "user",
-                    "content": user_prompt
+                    "content": en_userprompt
                 }
             ]
         )
@@ -252,7 +258,8 @@ def search_top_k_similar_items_from_opensearch(user_prompt: str, index_name: str
         response = find_k_similar_items(
             opensearch_client,
             response_dict,
-            embedding,
+            en_embedding,
+            zh_embedding,
             index_name=index_name
         )
         print(response)

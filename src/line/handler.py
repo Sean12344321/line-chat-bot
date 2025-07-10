@@ -51,7 +51,8 @@ def build_bubble(product: Dict, template: Dict) -> Dict:
 def build_flex_message(user_input: str, template: Dict) -> FlexMessage:
     """Build a Flex Message carousel from search results."""
     try:
-        products = search_top_k_similar_items_from_opensearch(user_input)
+        translated_input = translate_text(user_input, source_lang='zh', target_lang='en')
+        products = search_top_k_similar_items_from_opensearch(en_userprompt=translated_input, zh_userprompt=user_input)
         bubbles = [bubble for product in products if (bubble := build_bubble(product, template))]
         if not bubbles:
             logging.info(f"No products found for user input: {user_input}")
@@ -79,7 +80,7 @@ def callback():
         abort(400)
     return 'OK'
 
-with open("data/flex_message.json", encoding='utf-8') as f:
+with open("../../data/flex_message.json", encoding='utf-8') as f:
     flex_msg = json.load(f)
 
 @handler.add(FollowEvent)
@@ -103,7 +104,8 @@ def handle_message(event):
     with ApiClient(configuration) as api_client:
         try:
             line_bot_api = MessagingApi(api_client)
-            user_input = translate_text(event.message.text)
+            user_input = event.message.text
+            
             message = build_flex_message(user_input, flex_msg["product_template"])
             if isinstance(message, FlexMessage) and not message.contents.to_dict().get("contents"):
                 raise ValueError("FlexMessage contents is empty")
