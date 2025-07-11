@@ -18,7 +18,7 @@ from opensearch.function import (
 )
 
 env_path = Path(__file__).resolve().parent.parent.parent / '.env'
-load_dotenv(dotenv_path=env_path)
+load_dotenv(dotenv_path=env_path, override=True)
 logging.basicConfig(level=logging.INFO) 
 
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))

@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO)
  
 # Initialize OpenSearch client
 env_path = Path(__file__).resolve().parent.parent.parent / '.env' 
-load_dotenv(dotenv_path=env_path)
+load_dotenv(dotenv_path=env_path, override=True)
 credentials = boto3.Session().get_credentials()
 aws_auth = AWS4Auth(credentials.access_key, credentials.secret_key, 'ap-northeast-1', 'es', session_token=credentials.token)
 opensearch_client = OpenSearch(

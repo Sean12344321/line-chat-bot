@@ -13,7 +13,7 @@ from opensearch.function import search_top_k_similar_items_from_opensearch
 from apscheduler.schedulers.background import BackgroundScheduler
 from scrapers.main import run_crawler
 env_path = Path(__file__).resolve().parent.parent.parent / '.env'
-load_dotenv(dotenv_path=env_path)
+load_dotenv(dotenv_path=env_path, override=True)
 logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 
