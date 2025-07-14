@@ -11,3 +11,4 @@ webdriver_manager
 pytest 
 pytest-mock
 apscheduler
+gunicorn

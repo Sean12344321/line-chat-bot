@@ -1,6 +1,7 @@
 import os, logging, json, copy, sys, boto3
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from apscheduler.schedulers.background import BackgroundScheduler
 from typing import Dict
 from pathlib import Path
 from flask import Flask, request, abort
@@ -15,11 +16,12 @@ from scrapers.main import run_crawler
 env_path = Path(__file__).resolve().parent.parent.parent / '.env'
 load_dotenv(dotenv_path=env_path, override=True)
 logging.basicConfig(level=logging.INFO)
+logging.getLogger('apscheduler').setLevel(logging.DEBUG)
 app = Flask(__name__)
 
 def start_scheduler():
     scheduler = BackgroundScheduler()
-    scheduler.add_job(run_crawler, 'cron', hour=4, minute=0, day='*/2')
+    scheduler.add_job(run_crawler, 'cron', hour=13, minute=30, day='*/1')
     scheduler.start()
     print("APScheduler started for crawler.")
 
@@ -136,5 +138,5 @@ def handle_message(event):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)  
     start_scheduler()
+    app.run(host="0.0.0.0", port=5000)  
