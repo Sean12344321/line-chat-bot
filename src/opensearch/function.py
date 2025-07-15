@@ -222,7 +222,6 @@ def find_k_similar_items(opensearch_client, json_response: dict, en_embedding: l
                     },
                     "_source": ["e_commercesite", "name", "price_twd", "href", "image_url", "keyword"]
                 }
-                print(query)
                 
                 response = opensearch_client.search(index=index_name, body=query)
                 hits = response["hits"]["hits"]

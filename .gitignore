@@ -4,7 +4,6 @@ ngrok.exe
 __pycache__
 *.pyc
 venv/
-gpt-linebot.py
 chromedriver.exe
 tempCodeRunnerFile.py
 .env

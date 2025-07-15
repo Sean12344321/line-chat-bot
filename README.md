@@ -16,15 +16,17 @@ ShoppingBot is a LINE Bot that helps users search for products across multiple e
 - **Python**: Version 3.8+.
 - **Dependencies**: Install via `pip install -r requirements.txt`.
 
-
 ## File description
 ### src/scrapers/main.py: 
 Scrapes products from eBay, Momo, PChome using keywords in data/search_keywords.txt.
 ### src/opensearch/function.py: 
 Functions that related to opensearch.
-### src/line/handler.py: 
+### src/line/app.py: 
 Starts the webhook server to handle LINE messages and run scrapers in background per two days.
 
+## execute
+`cd line-chat-bot`
+`gunicorn -w 4 -b 0.0.0.0:5000 src.line.app:app`
 
 ## License
 ### MIT License
