@@ -13,3 +13,4 @@ pytest-mock
 apscheduler
 gunicorn
 numpy
+dotenv

@@ -58,6 +58,6 @@ def scrape_pchome(en_keyword, zh_keyword, max_items=100):
     return items
 
 if __name__ == "__main__":
-    data = scrape_pchome("laptop", max_items=100)
+    data = scrape_pchome("power bank", "跳繩", max_items=100)
     for item in data:
         print(item)

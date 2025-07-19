@@ -31,7 +31,7 @@ handler = WebhookHandler(os.getenv('LINE_SECRET'))
 def translate_text(text, source_lang='zh', target_lang='en'):
     """Translate text using AWS Translate."""
     try:
-        translate = boto3.client('translate')
+        translate = boto3.client('translate', region_name='ap-northeast-1')
         response = translate.translate_text(
             Text=text,
             SourceLanguageCode=source_lang,

@@ -76,4 +76,17 @@ def run_crawler():
             time.sleep(3) 
 
 if __name__ == "__main__":
-    run_crawler() 
+    get_document_count_from_opensearch(e_commercesite="momo", keyword="treadmill")
+    get_document_count_from_opensearch(e_commercesite="momo", keyword="dumbbell")
+    get_document_count_from_opensearch(e_commercesite="momo", keyword="yoga mat")
+    get_document_count_from_opensearch(e_commercesite="momo", keyword="resistance band")
+    get_document_count_from_opensearch(e_commercesite="momo", keyword="hand grip strengthener")
+    get_document_count_from_opensearch(e_commercesite="momo", keyword="exercise ball")
+    get_document_count_from_opensearch(e_commercesite="momo", keyword="jump rope")
+    get_document_count_from_opensearch(e_commercesite="momo", keyword="treadmill")
+    get_document_count_from_opensearch(e_commercesite="momo", keyword="dumbbell")
+    get_document_count_from_opensearch(e_commercesite="momo", keyword="yoga mat")
+    get_document_count_from_opensearch(e_commercesite="momo", keyword="resistance band")
+    get_document_count_from_opensearch(e_commercesite="momo", keyword="hand grip strengthener")
+    get_document_count_from_opensearch(e_commercesite="momo", keyword="power bank")
+    get_document_count_from_opensearch(e_commercesite="momo", keyword="charging cable")

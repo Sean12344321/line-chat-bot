@@ -67,6 +67,6 @@ def scrape_momo(en_keyword, zh_keyword, max_items=100):
     return items
 
 if __name__ == "__main__":
-    data = scrape_momo("laptop", max_items=200)
+    data = scrape_momo("laptop", "筆電", max_items=200)
     for item in data:
         print(item)
