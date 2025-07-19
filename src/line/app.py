@@ -1,4 +1,5 @@
-import os, logging, json, copy, sys, boto3
+import os, logging, json, copy, sys, boto3, atexit
+from datetime import datetime
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -21,9 +22,14 @@ app = Flask(__name__)
 
 def start_scheduler():
     scheduler = BackgroundScheduler()
-    scheduler.add_job(run_crawler, 'cron', hour=13, minute=30, day='*/1')
+    
+    scheduler.add_job(run_crawler, 'date', run_date=datetime.now())
+    scheduler.add_job(run_crawler, 'cron', hour=4, minute=30, day='*/2')
+    
     scheduler.start()
     print("APScheduler started for crawler.")
+    
+    atexit.register(lambda: scheduler.shutdown())
 
 configuration = Configuration(access_token=os.getenv('LINE_TOKEN'))
 handler = WebhookHandler(os.getenv('LINE_SECRET'))
