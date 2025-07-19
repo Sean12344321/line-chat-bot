@@ -7,3 +7,4 @@ venv/
 chromedriver.exe
 tempCodeRunnerFile.py
 .env
+Taipei-key.pem
