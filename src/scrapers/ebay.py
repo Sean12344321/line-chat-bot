@@ -58,6 +58,7 @@ def scrape_ebay(keyword, max_items=100):
                 logging.error("Only 2 products found, it's ebay problem that only show 2 invalid products")
                 return items
             for p in products:
+                time.sleep(0.1) # Small delay to avoid overwhelming the page
                 try:
                     name = p.find_element(By.CLASS_NAME, 's-item__title').text
                     price_element = p.find_element(By.CLASS_NAME, 's-item__price')

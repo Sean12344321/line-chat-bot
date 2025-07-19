@@ -42,6 +42,7 @@ def scrape_momo(en_keyword, zh_keyword, max_items=100):
             print(driver.current_url)
             products = driver.find_elements(By.CLASS_NAME, 'listAreaLi')
             for p in products:
+                time.sleep(0.1) # Small delay to avoid overwhelming the page
                 try:
                     name = p.find_element(By.CLASS_NAME, 'prdNameTitle').text
                     price = p.find_element(By.CLASS_NAME, 'price').text.replace(",", "")

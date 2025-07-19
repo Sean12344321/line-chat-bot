@@ -24,6 +24,7 @@ def scrape_pchome(en_keyword, zh_keyword, max_items=100):
         logging.info(f"Total pages found: {total_pages}")
         
         for page in range(1, total_pages + 1):
+            time.sleep(0.1) # Small delay to avoid overwhelming the page
             logging.info(f"Scraping page {page}...")
             params['page'] = page
             try:
