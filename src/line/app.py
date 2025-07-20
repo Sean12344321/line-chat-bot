@@ -23,11 +23,11 @@ app = Flask(__name__)
 def start_scheduler():
     scheduler = BackgroundScheduler()
     
+    logging.info("APScheduler started for crawler.")
     scheduler.add_job(run_crawler, 'date', run_date=datetime.now())
     scheduler.add_job(run_crawler, 'cron', hour=4, minute=30, day='*/2')
     
     scheduler.start()
-    print("APScheduler started for crawler.")
     
     atexit.register(lambda: scheduler.shutdown())
 
@@ -143,6 +143,7 @@ def handle_message(event):
             )
 
 
-if __name__ == "__main__":
-    start_scheduler()
-    app.run(host="0.0.0.0", port=5000, debug=False)  
+# if __name__ == "__main__":
+#     start_scheduler()
+#     app.run(host="0.0.0.0", port=5000, debug=False)
+start_scheduler()
