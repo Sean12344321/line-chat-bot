@@ -75,5 +75,7 @@ def run_crawler():
                 return
             time.sleep(3) 
 
-if __name__ == "__main__":
-    run_crawler()
+# if __name__ == "__main__":
+#     start_scheduler()
+#     app.run(host="0.0.0.0", port=5000, debug=False)
+start_scheduler()
