@@ -1,79 +1,147 @@
-import os, sys, logging, time
+import os, logging, json, copy, sys, boto3, atexit
+from datetime import datetime
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from datetime import datetime
+from apscheduler.schedulers.background import BackgroundScheduler
+from typing import Dict
 from pathlib import Path
+from flask import Flask, request, abort
 from dotenv import load_dotenv
-from openai import OpenAI
-from src.scrapers.momo import scrape_momo
-from src.scrapers.ebay import scrape_ebay
-from src.scrapers.pchome import scrape_pchome
-from opensearch.function import (
-    create_index_for_opensearch,
-    store_and_replace_items_from_opensearch, 
-    delete_outdated_items_from_opensearch,
-    delete_all_items_from_opensearch,
-    get_document_count_from_opensearch,
-    search_top_k_similar_items_from_opensearch,
-)
-
+from linebot.v3 import WebhookHandler 
+from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent
+from linebot.v3.messaging import FlexMessage, ReplyMessageRequest, Configuration, ApiClient, MessagingApi, FlexContainer, TextMessage
+from linebot.v3.exceptions import InvalidSignatureError
+from opensearch.function import search_top_k_similar_items_from_opensearch
+from apscheduler.schedulers.background import BackgroundScheduler
+from scrapers.main import run_crawler
 env_path = Path(__file__).resolve().parent.parent.parent / '.env'
 load_dotenv(dotenv_path=env_path, override=True)
-logging.basicConfig(level=logging.INFO) 
+logging.basicConfig(level=logging.INFO)
+logging.getLogger('apscheduler').setLevel(logging.DEBUG)
+app = Flask(__name__)
 
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+def start_scheduler():
+    scheduler = BackgroundScheduler()
+    
+    logging.info("APScheduler started for crawler.")
+    scheduler.add_job(run_crawler, 'date', run_date=datetime.now())
+    scheduler.add_job(run_crawler, 'cron', hour=4, minute=30, day='*/2')
+    
+    scheduler.start()
+    
+    atexit.register(lambda: scheduler.shutdown())
 
-def run_crawler():
-    """Run scraping, translation, and storage for all e-commerce sites."""
-    with open("./data/search_keywords.txt", "r", encoding="utf-8") as file:
-        lines = file.readlines()
-    retry_limit = 3
-    all_items = []
-    for attempt in range(retry_limit):
+configuration = Configuration(access_token=os.getenv('LINE_TOKEN'))
+handler = WebhookHandler(os.getenv('LINE_SECRET'))
+
+def translate_text(text, source_lang='zh', target_lang='en'):
+    """Translate text using AWS Translate."""
+    try:
+        translate = boto3.client('translate', region_name='ap-northeast-1')
+        response = translate.translate_text(
+            Text=text,
+            SourceLanguageCode=source_lang,
+            TargetLanguageCode=target_lang
+        )
+        translated_text = response['TranslatedText']
+        logging.info(f"Translated '{text}' to '{translated_text}'")
+        return translated_text
+    except Exception as e:
+        logging.error(f"Translation failed for '{text}': {e}")
+        return text
+
+def build_bubble(product: Dict, template: Dict) -> Dict:
+    """Build a Flex Message bubble for a product."""
+    try:
+        bubble = copy.deepcopy(template)
+        bubble["hero"]["url"] = product.get("image_url", "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQsI1LNctDqWA1iEu24tUcfbiWZKqabrF7moQ&s")
+        bubble["body"]["contents"][0]["text"] = product["name"]
+        bubble["body"]["contents"][0]["action"]["uri"] = product["href"]
+        bubble["body"]["contents"][1]["contents"][0]["text"] = f"NT$ {product['price_twd']}"
+        bubble["body"]["contents"][1]["contents"][1]["text"] = product["e_commercesite"].upper()
+        return bubble
+    except KeyError as e:
+        logging.error(f"Missing key in product data: {e}")
+        return None
+
+def build_flex_message(user_input: str, template: Dict) -> FlexMessage:
+    """Build a Flex Message carousel from search results."""
+    try:
+        translated_input = translate_text(user_input, source_lang='zh', target_lang='en')
+        products = search_top_k_similar_items_from_opensearch(en_userprompt=translated_input, zh_userprompt=user_input)
+        bubbles = [bubble for product in products if (bubble := build_bubble(product, template))]
+        if not bubbles:
+            logging.info(f"No products found for user input: {user_input}")
+            return TextMessage(text="搜尋不到符合要求的商品")
+        logging.info(f"Found {len(bubbles)} products for user input: {user_input}")
+        bubble_msg = {"type": "carousel", "contents": bubbles}
+        return FlexMessage(
+            alt_text="Search Results",
+            contents=FlexContainer.from_json(json.dumps(bubble_msg, ensure_ascii=False))
+        )
+    except Exception as e:
+        logging.error(f"Failed to build Flex Message for input '{user_input}': {str(e)}")
+        return TextMessage(text="搜尋不到符合要求的商品")
+
+@app.route("/", methods=['POST'])
+def callback():
+    """Handle LINE webhook callbacks.""" 
+    signature = request.headers['X-Line-Signature']
+    body = request.get_data(as_text=True)
+    app.logger.info("Request body: " + body)
+    try:
+        handler.handle(body, signature)
+    except InvalidSignatureError:
+        app.logger.info("Invalid signature. Please check your channel access token/channel secret.")
+        abort(400)
+    return 'OK'
+
+with open("./data/flex_message.json", encoding='utf-8') as f:
+    flex_msg = json.load(f)
+
+@handler.add(FollowEvent)
+def handle_follow(event):
+    """Handle LINE follow events."""
+    welcome_msg = flex_msg["welcome"]
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        bubble_string = json.dumps(welcome_msg, ensure_ascii=False)
+        message = FlexMessage(alt_text="Welcome!", contents=FlexContainer.from_json(bubble_string))
+        line_bot_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[message]
+            )
+        )
+
+@handler.add(MessageEvent, message=TextMessageContent)
+def handle_message(event):
+    """Handle LINE text messages."""
+    with ApiClient(configuration) as api_client:
         try:
-            create_index_for_opensearch()
-            keywords = {
-                "Fitness": {"zh": [], "en": []},
-                "Technology": {"zh": [], "en": []},
-            }
-            current_category = None
-            for line in lines:
-                line = line.strip()
-                if line.startswith("#"):
-                    current_category = line[1:].strip().split('-')
-                elif line and current_category:
-                    keywords[current_category[0]][current_category[1]].append(line)
-            for category in keywords:
-                for zh_keyword, en_keyword in zip(keywords[category]["zh"], keywords[category]["en"]):
-                    try:
-                        all_items.extend(scrape_ebay(en_keyword))
-                        all_items.extend(scrape_momo(en_keyword, zh_keyword))
-                        all_items.extend(scrape_pchome(en_keyword, zh_keyword))
-                    except Exception as e:
-                        logging.error(f"failed for {zh_keyword}/{en_keyword}: {str(e)}")
-            current_time = datetime.now().isoformat()
-            for item in all_items:
-                item["timestamp"] = current_time
-            logging.info(f"Collected {len(all_items)} items from all e-commerce sites")
-            for item in all_items:
-                embedding = openai_client.embeddings.create(input=item["name"], model=os.getenv("OPENAI_EMBEDDING_MODEL")).data[0].embedding
-                item["embedding"] = embedding 
-                logging.info(f"Created embedding for item: {item['name']}")
-            logging.info("All items embeddings have been created")
-
-            store_and_replace_items_from_opensearch(all_items)
-            logging.info("All items stored to OpenSearch")
-            delete_outdated_items_from_opensearch(days=14)
-            logging.info("Outdated items deleted from OpenSearch")
-            logging.info("Crawler run completed successfully")
-            return
-        
+            line_bot_api = MessagingApi(api_client)
+            user_input = event.message.text
+            
+            message = build_flex_message(user_input, flex_msg["product_template"])
+            if isinstance(message, FlexMessage) and not message.contents.to_dict().get("contents"):
+                raise ValueError("FlexMessage contents is empty")
+            line_bot_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[message]
+                )
+            )
         except Exception as e:
-            logging.warning(f"Attempt {attempt} failed: {e}")
-            if attempt == retry_limit:
-                logging.error("Failed to run crawler after multiple attempts, exiting.")
-                return
-            time.sleep(3) 
+            logging.error(f"Failed to reply message: {str(e)}")
+            line_bot_api = MessagingApi(api_client)
+            message = TextMessage(text="搜尋失敗，請稍後再試")
+            line_bot_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[message] 
+                )
+            )
+
 
 # if __name__ == "__main__":
 #     start_scheduler()
