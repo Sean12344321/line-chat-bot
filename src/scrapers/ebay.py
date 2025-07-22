@@ -125,7 +125,7 @@ if __name__ == "__main__":
     max_attempts = 10
     attempts = 0
     while not data and attempts < max_attempts:
-        data = scrape_ebay("t-shirt", max_items=100)
+        data = scrape_ebay("exercise ball", max_items=100)
         attempts += 1
     for item in data:
         print(item)

@@ -10,3 +10,4 @@ tempCodeRunnerFile.py
 Taipei-key.pem
 src/scrapers/google-chrome-stable_current_x86_64.rpm
 gunicorn.conf.py
+logs/

@@ -23,8 +23,8 @@ app = Flask(__name__)
 def start_scheduler():
     scheduler = BackgroundScheduler()
     
-    logging.info("APScheduler started for crawler.")
-    scheduler.add_job(run_crawler, 'date', run_date=datetime.now())
+    #logging.info("APScheduler started for crawler.")
+    #scheduler.add_job(run_crawler, 'date', run_date=datetime.now())
     scheduler.add_job(run_crawler, 'cron', hour=4, minute=30, day='*/2')
     
     scheduler.start()

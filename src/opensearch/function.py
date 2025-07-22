@@ -248,7 +248,7 @@ def search_top_k_similar_items_from_opensearch(en_userprompt: str, zh_userprompt
                 },
                 { 
                     "role": "user",
-                    "content": en_userprompt
+                    "content": zh_userprompt
                 }
             ]
         )
