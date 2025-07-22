@@ -23,11 +23,11 @@ app = Flask(__name__)
 
 def start_scheduler():
     scheduler = BackgroundScheduler()
-    scheduler.add_job(run_crawler, 'cron', hour=4, minute=30, day='*/2')
+    refresh_aws_auth()
     scheduler.add_job(refresh_aws_auth, 'interval', hours=5)
+    scheduler.add_job(run_crawler, 'cron', hour=4, minute=30, day='*/2')
     # Run immediately on startup as well
     scheduler.add_job(run_crawler, 'date', run_date=datetime.now())
-    scheduler.add_job(refresh_aws_auth, 'date', run_date=datetime.now())
     scheduler.start()
     atexit.register(lambda: scheduler.shutdown())
 
