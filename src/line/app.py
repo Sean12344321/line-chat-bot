@@ -154,5 +154,4 @@ def handle_message(event):
 
 # if __name__ == "__main__":
 #     start_scheduler()
-app.run(host="0.0.0.0", port=5000, debug=False)
 start_scheduler()
