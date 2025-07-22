@@ -63,7 +63,7 @@ def run_crawler():
 
             store_and_replace_items_from_opensearch(all_items)
             logging.info("All items stored to OpenSearch")
-            delete_outdated_items_from_opensearch(days=14)
+            delete_outdated_items_from_opensearch(days=3)
             logging.info("Outdated items deleted from OpenSearch")
             logging.info("Crawler run completed successfully")
             return

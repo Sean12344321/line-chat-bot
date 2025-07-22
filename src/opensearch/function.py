@@ -1,5 +1,6 @@
 import os, logging, time, boto3, json
 from typing import List, Dict
+from opensearchpy.exceptions import TransportError
 from opensearchpy import OpenSearch, RequestsHttpConnection
 from requests_aws4auth import AWS4Auth
 from dotenv import load_dotenv
@@ -7,23 +8,29 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import numpy as np
 logging.basicConfig(level=logging.INFO)
- 
 # Initialize OpenSearch client
 env_path = Path(__file__).resolve().parent.parent.parent / '.env' 
 load_dotenv(dotenv_path=env_path, override=True)
-credentials = boto3.Session().get_credentials()
-aws_auth = AWS4Auth(credentials.access_key, credentials.secret_key, 'ap-northeast-1', 'es', session_token=credentials.token)
-opensearch_client = OpenSearch(
-    hosts=[{'host': os.getenv("OpenSearch_Domain"), 'port': 443}],
-    http_auth=aws_auth, 
-    use_ssl=True,
-    verify_certs=True,
-    connection_class=RequestsHttpConnection,
-    timeout=30,
-)
 PROMPT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../data/system_prompt.txt'))
+aws_auth = None
+opensearch_client = None
 with open(PROMPT_PATH, 'r') as file:
     system_prompt = file.read()
+
+def refresh_aws_auth():
+    global aws_auth, opensearch_client
+    credentials = boto3.Session().get_credentials()
+    aws_auth = AWS4Auth(credentials.access_key, credentials.secret_key, 'ap-northeast-1', 'es', session_token=credentials.token)
+    opensearch_client = OpenSearch(
+        hosts=[{'host': os.getenv("OpenSearch_Domain"), 'port': 443}],
+        http_auth=aws_auth, 
+        use_ssl=True,
+        verify_certs=True,
+        connection_class=RequestsHttpConnection,
+        timeout=30,
+    )
+    logging.info("AWS credentials and OpenSearch client refreshed.")
+
 def create_index_for_opensearch(index_name: str = "products"):
     """Create an OpenSearch index with k-NN settings if it doesn't exist."""
     if not opensearch_client.indices.exists(index=index_name):
@@ -162,7 +169,7 @@ def store_and_replace_items_from_opensearch(items: List[Dict], index_name: str =
             logging.error(f"Failed to store item: {item['name']} - {str(e)}")
     logging.info(f"Total items deleted: {deleted_item_counts}, new items stored: {new_item_counts} in index '{index_name}'")
 
-def delete_outdated_items_from_opensearch(index_name: str = "products", days: int = 14):
+def delete_outdated_items_from_opensearch(index_name: str = "products", days: int = 3):
     """Delete items from OpenSearch with timestamps older than the specified number of days."""
     try:
         cutoff_time = (datetime.now() - timedelta(days=days)).isoformat()
@@ -228,9 +235,15 @@ def find_k_similar_items(opensearch_client, json_response: dict, en_embedding: l
                 results.extend([hit["_source"] for hit in hits])
                 logging.info(f"Found {len(hits)} items for {site} in index '{index_name}'")
         return results
+    except TransportError as e:
+        if e.status_code == 504:
+            logging.error(f"OpenSearch 504 Gateway Timeout in index '{index_name}': {str(e)}")
+        else:
+            logging.error(f"OpenSearch TransportError in index '{index_name}': {str(e)}")
+        raise 
     except Exception as e:
         logging.error(f"Search failed in index '{index_name}': {str(e)}")
-        return []
+        raise
 
 def search_top_k_similar_items_from_opensearch(en_userprompt: str, zh_userprompt: str, index_name: str = "products") -> List[Dict]:
     """Search for similar products using k-NN based on user input."""
@@ -261,7 +274,6 @@ def search_top_k_similar_items_from_opensearch(en_userprompt: str, zh_userprompt
             zh_embedding,
             index_name=index_name
         )
-        print(response)
         return response
     except Exception as e:
         logging.error(f"Search failed: {e}")

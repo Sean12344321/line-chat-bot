@@ -10,8 +10,9 @@ from dotenv import load_dotenv
 from linebot.v3 import WebhookHandler 
 from linebot.v3.webhooks import MessageEvent, TextMessageContent, FollowEvent
 from linebot.v3.messaging import FlexMessage, ReplyMessageRequest, Configuration, ApiClient, MessagingApi, FlexContainer, TextMessage
+from opensearchpy.exceptions import TransportError
 from linebot.v3.exceptions import InvalidSignatureError
-from opensearch.function import search_top_k_similar_items_from_opensearch
+from opensearch.function import refresh_aws_auth, search_top_k_similar_items_from_opensearch
 from apscheduler.schedulers.background import BackgroundScheduler
 from scrapers.main import run_crawler
 env_path = Path(__file__).resolve().parent.parent.parent / '.env'
@@ -22,13 +23,13 @@ app = Flask(__name__)
 
 def start_scheduler():
     scheduler = BackgroundScheduler()
-    
-    #logging.info("APScheduler started for crawler.")
-    #scheduler.add_job(run_crawler, 'date', run_date=datetime.now())
     scheduler.add_job(run_crawler, 'cron', hour=4, minute=30, day='*/2')
-    
+    scheduler.add_job(refresh_aws_auth, 'interval', hours=5)
+
+    # Run immediately on startup as well
+    refresh_aws_auth()
+    run_crawler()
     scheduler.start()
-    
     atexit.register(lambda: scheduler.shutdown())
 
 configuration = Configuration(access_token=os.getenv('LINE_TOKEN'))
@@ -79,9 +80,17 @@ def build_flex_message(user_input: str, template: Dict) -> FlexMessage:
             alt_text="Search Results",
             contents=FlexContainer.from_json(json.dumps(bubble_msg, ensure_ascii=False))
         )
+    except TransportError as e:
+        if e.status_code == 504:
+            logging.error(f"504 Gateway Timeout from OpenSearch: {str(e)}")
+            return TextMessage(text="aws資料庫暫時崩潰，請稍後再試")
+        else:
+            logging.error(f"OpenSearch TransportError: {str(e)}")
+            return TextMessage(text="搜尋商品時發生資料庫錯誤，請稍後再試")
+
     except Exception as e:
         logging.error(f"Failed to build Flex Message for input '{user_input}': {str(e)}")
-        return TextMessage(text="搜尋不到符合要求的商品")
+        return TextMessage(text="搜尋商品時發生資料庫錯誤，請稍後再試")
 
 @app.route("/", methods=['POST'])
 def callback():
