@@ -28,7 +28,7 @@ def start_scheduler():
 
     # Run immediately on startup as well
     refresh_aws_auth()
-    # run_crawler()
+    run_crawler()
     scheduler.start()
     atexit.register(lambda: scheduler.shutdown())
 
