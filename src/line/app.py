@@ -25,10 +25,9 @@ def start_scheduler():
     scheduler = BackgroundScheduler()
     scheduler.add_job(run_crawler, 'cron', hour=4, minute=30, day='*/2')
     scheduler.add_job(refresh_aws_auth, 'interval', hours=5)
-
     # Run immediately on startup as well
-    refresh_aws_auth()
-    run_crawler()
+    scheduler.add_job(run_crawler, 'date', run_date=datetime.now())
+    scheduler.add_job(refresh_aws_auth, 'date', run_date=datetime.now())
     scheduler.start()
     atexit.register(lambda: scheduler.shutdown())
 
@@ -63,7 +62,7 @@ def build_bubble(product: Dict, template: Dict) -> Dict:
         return bubble
     except KeyError as e:
         logging.error(f"Missing key in product data: {e}")
-        return None
+        raise
 
 def build_flex_message(user_input: str, template: Dict) -> FlexMessage:
     """Build a Flex Message carousel from search results."""
@@ -81,7 +80,7 @@ def build_flex_message(user_input: str, template: Dict) -> FlexMessage:
             contents=FlexContainer.from_json(json.dumps(bubble_msg, ensure_ascii=False))
         )
     except TransportError as e:
-        if e.status_code == 504:
+        if e.status_code == 504 or e.status_code == 503 or e.status_code == 502:
             logging.error(f"504 Gateway Timeout from OpenSearch: {str(e)}")
             return TextMessage(text="aws資料庫暫時崩潰，請稍後再試")
         else:
@@ -153,5 +152,6 @@ def handle_message(event):
 
 
 # if __name__ == "__main__":
-#     start_scheduler()
+    # start_scheduler()
+    # app.run(host="0.0.0.0", port=5000, debug=False)  # Use port 5000 for Flask app
 start_scheduler()

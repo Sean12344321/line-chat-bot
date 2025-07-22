@@ -27,7 +27,7 @@ def refresh_aws_auth():
         use_ssl=True,
         verify_certs=True,
         connection_class=RequestsHttpConnection,
-        timeout=30,
+        timeout=15,
     )
     logging.info("AWS credentials and OpenSearch client refreshed.")
 
@@ -105,7 +105,7 @@ def get_document_count_from_opensearch(index_name: str = "products", e_commerces
                        f"for e_commercesite '{e_commercesite}': {str(e)}" if e_commercesite != "\0"
                        else f"Failed to get document count from index '{index_name}': {str(e)}")
         logging.error(log_message)
-        return -1
+        raise
 
 def store_and_replace_items_from_opensearch(items: List[Dict], index_name: str = "products"):
     """Store items in OpenSearch with embeddings, replacing highly similar items."""
@@ -167,6 +167,7 @@ def store_and_replace_items_from_opensearch(items: List[Dict], index_name: str =
             time.sleep(0.5)  # Sleep to avoid rate limiting
         except Exception as e:
             logging.error(f"Failed to store item: {item['name']} - {str(e)}")
+            raise
     logging.info(f"Total items deleted: {deleted_item_counts}, new items stored: {new_item_counts} in index '{index_name}'")
 
 def delete_outdated_items_from_opensearch(index_name: str = "products", days: int = 3):
@@ -179,6 +180,7 @@ def delete_outdated_items_from_opensearch(index_name: str = "products", days: in
         logging.info(f"Deleted {deleted} outdated items")
     except Exception as e:
         logging.error(f"Error deleting outdated items: {str(e)}")
+        raise
 
 
 def delete_all_items_from_opensearch(index_name: str = "products"):
@@ -191,6 +193,7 @@ def delete_all_items_from_opensearch(index_name: str = "products"):
         # logging.info(f"Deleted index '{index_name}'")
     except Exception as e:
         logging.error(f"Failed to delete documents from index '{index_name}': {str(e)}")
+        raise
 
 def find_k_similar_items(opensearch_client, json_response: dict, en_embedding: list, zh_embedding: list, index_name: str = "products") -> list:
     """Execute k-NN search to retrieve exact counts for each e_comercesite based on JSON response."""
@@ -277,4 +280,4 @@ def search_top_k_similar_items_from_opensearch(en_userprompt: str, zh_userprompt
         return response
     except Exception as e:
         logging.error(f"Search failed: {e}")
-        return []
+        raise
