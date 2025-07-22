@@ -28,7 +28,7 @@ def start_scheduler():
 
     # Run immediately on startup as well
     refresh_aws_auth()
-    run_crawler()
+    # run_crawler()
     scheduler.start()
     atexit.register(lambda: scheduler.shutdown())
 
@@ -154,5 +154,5 @@ def handle_message(event):
 
 # if __name__ == "__main__":
 #     start_scheduler()
-#     app.run(host="0.0.0.0", port=5000, debug=False)
+app.run(host="0.0.0.0", port=5000, debug=False)
 start_scheduler()
