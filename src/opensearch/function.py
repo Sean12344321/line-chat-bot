@@ -27,7 +27,7 @@ def refresh_aws_auth():
         use_ssl=True,
         verify_certs=True,
         connection_class=RequestsHttpConnection,
-        timeout=15,
+        timeout=20,
     )
     logging.info("AWS credentials and OpenSearch client refreshed.")
 
@@ -173,15 +173,16 @@ def delete_outdated_items_from_opensearch(index_name: str = "products", days: in
     """Delete items from OpenSearch with timestamps older than the specified number of days."""
     retry_count = 0
     while retry_count < 3:
+        retry_count += 1
         try:
             cutoff_time = (datetime.now() - timedelta(days=days)).isoformat()
             query = {"query": {"range": {"timestamp": {"lte": cutoff_time}}}}
             response = opensearch_client.delete_by_query(index=index_name, body=query)
             deleted = response["deleted"]
             logging.info(f"Deleted {deleted} outdated items")
+            break
         except Exception as e:
             logging.error(f"Error deleting outdated items: {str(e)}")
-            retry_count += 1
     if retry_count == 3:
         logging.error("Failed to delete outdated items after 3 attempts")
 
@@ -190,15 +191,16 @@ def delete_all_items_from_opensearch(index_name: str = "products"):
     """Delete all documents from the specified OpenSearch index."""
     retry_count = 0
     while retry_count < 3:
+        retry_count += 1
         try:
             query = {"query": {"match_all": {}}}
             response = opensearch_client.delete_by_query(index=index_name, body=query)
             logging.info(f"Deleted {response['deleted']} documents from index '{index_name}'")
             # opensearch_client.indices.delete(index=index_name)
             # logging.info(f"Deleted index '{index_name}'")
+            break
         except Exception as e:
             logging.error(f"Failed to delete documents from index '{index_name}': {str(e)}")
-            retry_count += 1
     if retry_count == 3:
         logging.error("Failed to delete all items after 3 attempts")
 
