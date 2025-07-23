@@ -15,6 +15,7 @@ from opensearch.function import (
     delete_all_items_from_opensearch,
     get_document_count_from_opensearch,
     search_top_k_similar_items_from_opensearch,
+    refresh_aws_auth
 )
 
 env_path = Path(__file__).resolve().parent.parent.parent / '.env'
@@ -76,18 +77,19 @@ def run_crawler():
             time.sleep(3) 
 
 if __name__ == "__main__":
-    # get_document_count_from_opensearch(e_commercesite="pchome", keyword="treadmill")
-    # get_document_count_from_opensearch(e_commercesite="pchome", keyword="dumbbell")
-    # get_document_count_from_opensearch(e_commercesite="pchome", keyword="yoga mat")
-    # get_document_count_from_opensearch(e_commercesite="pchome", keyword="resistance band")
-    # get_document_count_from_opensearch(e_commercesite="pchome", keyword="hand grip strengthener")
-    # get_document_count_from_opensearch(e_commercesite="pchome", keyword="exercise ball")
-    # get_document_count_from_opensearch(e_commercesite="pchome", keyword="jump rope")
-    # get_document_count_from_opensearch(e_commercesite="pchome", keyword="tablet")
-    # get_document_count_from_opensearch(e_commercesite="pchome", keyword="bluetooth earphone")
-    # get_document_count_from_opensearch(e_commercesite="pchome", keyword="smartphone")
-    # get_document_count_from_opensearch(e_commercesite="pchome", keyword="mouse")
-    # get_document_count_from_opensearch(e_commercesite="pchome", keyword="laptop")
-    # get_document_count_from_opensearch(e_commercesite="pchome", keyword="charging cable")
-    # get_document_count_from_opensearch(e_commercesite="pchome", keyword="power bank")
-    search_top_k_similar_items_from_opensearch("laptop", "筆電")
+    refresh_aws_auth()
+    get_document_count_from_opensearch(e_commercesite="ebay", keyword="treadmill")
+    get_document_count_from_opensearch(e_commercesite="ebay", keyword="dumbbell")
+    get_document_count_from_opensearch(e_commercesite="ebay", keyword="yoga mat")
+    get_document_count_from_opensearch(e_commercesite="ebay", keyword="resistance band")
+    get_document_count_from_opensearch(e_commercesite="ebay", keyword="hand grip strengthener")
+    get_document_count_from_opensearch(e_commercesite="ebay", keyword="exercise ball")
+    get_document_count_from_opensearch(e_commercesite="ebay", keyword="jump rope")
+    get_document_count_from_opensearch(e_commercesite="ebay", keyword="tablet")
+    get_document_count_from_opensearch(e_commercesite="ebay", keyword="bluetooth earphone")
+    get_document_count_from_opensearch(e_commercesite="ebay", keyword="smartphone")
+    get_document_count_from_opensearch(e_commercesite="ebay", keyword="mouse")
+    get_document_count_from_opensearch(e_commercesite="ebay", keyword="laptop")
+    get_document_count_from_opensearch(e_commercesite="ebay", keyword="charging cable")
+    get_document_count_from_opensearch(e_commercesite="ebay", keyword="power bank")
+    # search_top_k_similar_items_from_opensearch("laptop", "筆電")

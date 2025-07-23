@@ -10,7 +10,7 @@ import time, random, logging
 
 logging.basicConfig(level=logging.INFO)
 
-def scrape_ebay(keyword, max_items=100):
+def scraper(keyword, max_items=100):
     # Configure Chrome options for Linux
     options = Options()
     options.add_argument('--headless')  
@@ -120,12 +120,18 @@ def scrape_ebay(keyword, max_items=100):
 
     return items
 
-if __name__ == "__main__":
+def scrape_ebay(keyword, max_items=100):
     data = []
     max_attempts = 10
     attempts = 0
     while not data and attempts < max_attempts:
-        data = scrape_ebay("exercise ball", max_items=100)
+        data = scraper(keyword, max_items)
         attempts += 1
+    for item in data:
+        print(item)
+    return data
+
+if __name__ == "__main__":
+    data = scrape_ebay("laptop", max_items=100)
     for item in data:
         print(item)
