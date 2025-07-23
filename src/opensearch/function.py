@@ -197,6 +197,7 @@ def delete_all_items_from_opensearch(index_name: str = "products"):
 
 def find_k_similar_items(opensearch_client, json_response: dict, en_embedding: list, zh_embedding: list, index_name: str = "products") -> list:
     """Execute k-NN search to retrieve exact counts for each e_comercesite based on JSON response."""
+    # logging.warning(">>> find_k_similar_items() called")
     try:
         results = []
         site_counts = [

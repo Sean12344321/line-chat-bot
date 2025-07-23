@@ -32,10 +32,16 @@ def scrape_momo(en_keyword, zh_keyword, max_items=100):
         logging.info(f"Navigating to: {search_url}")
         driver.get(search_url)
         start_page = 0
-        while start_page == 0:
+        retry_count = 0
+        while start_page == 0 and retry_count < 3:
             pages = driver.find_elements(By.CLASS_NAME, 'pagination-link')
             start_page = len(pages) // 2 # momo pagination is invalide for first half of the pages, so we start from the second half
             logging.info(f"Find {len(pages)} pages")
+            retry_count += 1
+        if retry_count == 3:
+            logging.error("Failed to find valid pagination links after 3 attempts")
+            driver.quit()
+            return []
         for page in pages[start_page:len(pages)]:
             page.click()
             time.sleep(2) # Wait for page to load, can't use WebDriverWait here due to dynamic content
