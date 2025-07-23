@@ -52,13 +52,14 @@ def create_index_for_opensearch(index_name: str = "products"):
                 }
             }
         }
-        opensearch_client.indices.create(index=index_name, body=index_body)
-        logging.info(f"Index created: {index_name}")
+        try:
+            opensearch_client.indices.create(index=index_name, body=index_body)
+            logging.info(f"Index created: {index_name}")
+        except Exception as e:
+            logging.error(f"Failed to create index '{index_name}': {str(e)}")
+            raise
     else:
         logging.info(f"Index already exists: {index_name}")
-
-import logging
-from opensearchpy import OpenSearch
 
 def get_document_count_from_opensearch(index_name: str = "products", e_commercesite: str = "\0", keyword: str = "\0") -> int:
     """Return the total number of documents in the specified OpenSearch index and optionally filter by e_commercesite."""
@@ -105,7 +106,7 @@ def get_document_count_from_opensearch(index_name: str = "products", e_commerces
                        f"for e_commercesite '{e_commercesite}': {str(e)}" if e_commercesite != "\0"
                        else f"Failed to get document count from index '{index_name}': {str(e)}")
         logging.error(log_message)
-
+        raise
 def store_and_replace_items_from_opensearch(items: List[Dict], index_name: str = "products"):
     """Store items in OpenSearch with embeddings, replacing highly similar items."""
     deleted_item_counts = 0
@@ -170,26 +171,36 @@ def store_and_replace_items_from_opensearch(items: List[Dict], index_name: str =
 
 def delete_outdated_items_from_opensearch(index_name: str = "products", days: int = 3):
     """Delete items from OpenSearch with timestamps older than the specified number of days."""
-    try:
-        cutoff_time = (datetime.now() - timedelta(days=days)).isoformat()
-        query = {"query": {"range": {"timestamp": {"lte": cutoff_time}}}}
-        response = opensearch_client.delete_by_query(index=index_name, body=query)
-        deleted = response["deleted"]
-        logging.info(f"Deleted {deleted} outdated items")
-    except Exception as e:
-        logging.error(f"Error deleting outdated items: {str(e)}")
+    retry_count = 0
+    while retry_count < 3:
+        try:
+            cutoff_time = (datetime.now() - timedelta(days=days)).isoformat()
+            query = {"query": {"range": {"timestamp": {"lte": cutoff_time}}}}
+            response = opensearch_client.delete_by_query(index=index_name, body=query)
+            deleted = response["deleted"]
+            logging.info(f"Deleted {deleted} outdated items")
+        except Exception as e:
+            logging.error(f"Error deleting outdated items: {str(e)}")
+            retry_count += 1
+    if retry_count == 3:
+        logging.error("Failed to delete outdated items after 3 attempts")
 
 
 def delete_all_items_from_opensearch(index_name: str = "products"):
     """Delete all documents from the specified OpenSearch index."""
-    try:
-        query = {"query": {"match_all": {}}}
-        response = opensearch_client.delete_by_query(index=index_name, body=query)
-        logging.info(f"Deleted {response['deleted']} documents from index '{index_name}'")
-        # opensearch_client.indices.delete(index=index_name)
-        # logging.info(f"Deleted index '{index_name}'")
-    except Exception as e:
-        logging.error(f"Failed to delete documents from index '{index_name}': {str(e)}")
+    retry_count = 0
+    while retry_count < 3:
+        try:
+            query = {"query": {"match_all": {}}}
+            response = opensearch_client.delete_by_query(index=index_name, body=query)
+            logging.info(f"Deleted {response['deleted']} documents from index '{index_name}'")
+            # opensearch_client.indices.delete(index=index_name)
+            # logging.info(f"Deleted index '{index_name}'")
+        except Exception as e:
+            logging.error(f"Failed to delete documents from index '{index_name}': {str(e)}")
+            retry_count += 1
+    if retry_count == 3:
+        logging.error("Failed to delete all items after 3 attempts")
 
 def find_k_similar_items(opensearch_client, json_response: dict, en_embedding: list, zh_embedding: list, index_name: str = "products") -> list:
     """Execute k-NN search to retrieve exact counts for each e_comercesite based on JSON response."""
