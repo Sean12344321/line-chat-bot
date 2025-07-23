@@ -169,7 +169,7 @@ def store_and_replace_items_from_opensearch(items: List[Dict], index_name: str =
             logging.error(f"Failed to store item: {item['name']} - {str(e)}")
     logging.info(f"Total items deleted: {deleted_item_counts}, new items stored: {new_item_counts} in index '{index_name}'")
 
-def delete_outdated_items_from_opensearch(index_name: str = "products", days: int = 3):
+def delete_outdated_items_from_opensearch(index_name: str = "products", days: int = 2):
     """Delete items from OpenSearch with timestamps older than the specified number of days."""
     retry_count = 0
     while retry_count < 3:
