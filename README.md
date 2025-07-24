@@ -1,9 +1,13 @@
-## line-shopping-gpt
+# line-shopping-gpt
 
 > LINE ID: [@006whxns](https://line.me/R/ti/p/@006whxns)
 
 ## System Architecture
 
-![System Architecture](data/line-chat-bot-system-architecture.png)
+[System Architecture](data/line-chat-bot-system-architecture.png)
 
-This system architecture supports a LINE-based chatbot for product search across PChome, Momo, and eBay. In the **building phase**, an EC2 instance crawls product data, uses GPT embeddings to vectorize product names, and stores them in OpenSearch. In the **user interaction phase**, users send queries via LINE. The EC2 server receives requests (via Nginx on port 443), uses GPT Nano to extract intent and filters(intented product, e-commercesite / ceil or floor price) and translates them using AWS Translate. It then queries OpenSearch using Chinese for local sites (PChome, Momo) and English for eBay, returning the most relevant results back to the user.
+## Explanation
+
+This project is a LINE-based chatbot that semantically searches product information across PChome, eBay, and Momo.
+In the **building phase**, an AWS EC2 instance crawls product data, generates vector embeddings using GPT, and stores them in OpenSearch.
+During the **user interaction phase**, users send queries via LINE. The EC2 server (behind Nginx on port 443) receives the request, uses AWS Translate to produce both Chinese and English versions, and applies GPT Nano to extract user intent and filters (such as product type, platform, or price range). It then queries OpenSearch—using Chinese for PChome and Momo, and English for eBay—and returns the most relevant results to the user.
