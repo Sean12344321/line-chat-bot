@@ -1,32 +1,9 @@
-# ShoppingBot - LINE Bot for E-Commerce Search
+# 🛍️ line-shopping-gpt
 
-## Overview
-ShoppingBot is a LINE Bot that helps users search for products across multiple e-commerce platforms (PChome, eBay, Momo) using natural language queries. It leverages AWS OpenSearch for product indexing and similarity search, and Python for web scraping and LINE integration. Users can input sentences like "I want to find treadmills priced under 10000 TWD" to get relevant products displayed in a LINE response.
+> LINE ID: [@006whxns](https://line.me/R/ti/p/@006whxns)
 
-## Features
-- **Multi-Platform Search**: Searches PChome, eBay, and Momo for products matching user queries.
-- **Natural Language Processing**: Parses user inputs (e.g., "Please find a yoga mat") to extract keywords and filters (e.g., price ceilings).
-- **Embedding-Based Search**: Uses k-NN search in AWS OpenSearch to find similar products based on embeddings.
-- **Deduplication**: Ensures unique products by deleting items with >0.95 cosine similarity.
-- **LINE Integration**: Delivers results via a responsive Flex Message carousel or text replies.
+## 🧠 System Architecture
 
-## Prerequisites
-- **AWS Account**: Access to AWS OpenSearch and EC2.
-- **LINE Developer Account**: Channel access token and secret for LINE Messaging API.
-- **Python**: Version 3.8+.
-- **Dependencies**: Install via `pip install -r requirements.txt`.
+![System Architecture](data/line-chat-bot system architecture.png)
 
-## File description
-### src/scrapers/main.py: 
-Scrapes products from eBay, Momo, PChome using keywords in data/search_keywords.txt.
-### src/opensearch/function.py: 
-Functions that related to opensearch.
-### src/line/app.py: 
-Starts the webhook server to handle LINE messages and run scrapers in background per two days.
-
-## execute
-`cd line-chat-bot`
-`gunicorn -w 4 -b 0.0.0.0:5000 src.line.app:app`
-
-## License
-### MIT License
+This system architecture supports a LINE-based chatbot for product search across PChome, Momo, and eBay. In the **building phase**, an EC2 instance crawls product data, uses GPT embeddings to vectorize product names, and stores them in OpenSearch. In the **user interaction phase**, users send queries via LINE. The EC2 server receives requests (via Nginx on port 443), uses GPT Nano to extract intent and filters(intented product, e-commercesite / ceil or floor price) and translates them using AWS Translate. It then queries OpenSearch using Chinese for local sites (PChome, Momo) and English for eBay, returning the most relevant results back to the user.
