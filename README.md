@@ -1,4 +1,4 @@
-# line-shopping-bot
+# Real-Time Product Search Chatbot on LINE
 
 > LINE ID: [@006whxns](https://line.me/R/ti/p/@006whxns)
 
