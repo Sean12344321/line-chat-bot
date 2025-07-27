@@ -15,19 +15,20 @@ from linebot.v3.exceptions import InvalidSignatureError
 from opensearch.function import refresh_aws_auth, search_top_k_similar_items_from_opensearch
 from apscheduler.schedulers.background import BackgroundScheduler
 from scrapers.main import run_crawler
+from pytz import timezone
 env_path = Path(__file__).resolve().parent.parent.parent / '.env'
 load_dotenv(dotenv_path=env_path, override=True)
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('apscheduler').setLevel(logging.DEBUG)
 app = Flask(__name__)
-
+taipei = timezone('Asia/Taipei')
 def start_scheduler():
     scheduler = BackgroundScheduler()
     refresh_aws_auth()
     scheduler.add_job(refresh_aws_auth, 'interval', hours=5)
-    scheduler.add_job(run_crawler, 'cron', hour=4, minute=30, day='*/1')
+    scheduler.add_job(run_crawler, 'cron', hour=8, minute=0, day='*/1', timezone=taipei)
     # Run immediately on startup as well
-    scheduler.add_job(run_crawler, 'date', run_date=datetime.now())
+    # scheduler.add_job(run_crawler, 'date', run_date=datetime.now())
     scheduler.start()
     atexit.register(lambda: scheduler.shutdown())
 
