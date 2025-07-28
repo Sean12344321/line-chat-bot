@@ -26,9 +26,9 @@ def start_scheduler():
     scheduler = BackgroundScheduler()
     refresh_aws_auth()
     scheduler.add_job(refresh_aws_auth, 'interval', hours=5)
-    scheduler.add_job(run_crawler, 'cron', hour=8, minute=0, day='*/1', timezone=taipei)
+    scheduler.add_job(run_crawler, 'cron', hour=4, minute=0, day='*/1', timezone=taipei)
     # Run immediately on startup as well
-    # scheduler.add_job(run_crawler, 'date', run_date=datetime.now())
+    scheduler.add_job(run_crawler, 'date', run_date=datetime.now())
     scheduler.start()
     atexit.register(lambda: scheduler.shutdown())
 
